@@ -37,6 +37,8 @@ set(GGML_CUDA_NO_VMM ON CACHE BOOL "Do not require nvcuda.dll for CPU-only opera
 set(GGML_OPENMP ON CACHE BOOL "Parallel CPU inference" FORCE)
 set(GGML_BUILD_TESTS OFF CACHE BOOL "Stemora provides native tests" FORCE)
 set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "No extra examples" FORCE)
+# GGML's global ccache launcher is unreliable with MSVC/Ninja on hosted runners.
+set(GGML_CCACHE OFF CACHE BOOL "Use direct compiler invocations" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Shared inference libraries" FORCE)
 add_subdirectory("${STEMORA_GGML_SOURCE_DIR}" ggml EXCLUDE_FROM_ALL)
 endif()
