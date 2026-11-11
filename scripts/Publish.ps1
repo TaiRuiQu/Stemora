@@ -25,11 +25,10 @@ try {
         if (-not (Test-Path (Join-Path $destination $resource))) { throw "Published WinUI resource missing: $resource" }
     }
     New-Item -ItemType File -Force "$destination/portable.flag" | Out-Null
-    Copy-Item -LiteralPath README.md,THIRD-PARTY-NOTICES.md -Destination $destination
-    New-Item -ItemType Directory -Force "$destination/docs" | Out-Null
-    Copy-Item -LiteralPath docs/UI-DESIGN.md -Destination "$destination/docs/UI-DESIGN.md"
-    Copy-Item -LiteralPath docs/NATIVE-INFRA.md -Destination "$destination/docs/NATIVE-INFRA.md"
-    Copy-Item -LiteralPath docs/RELEASING.md -Destination "$destination/docs/RELEASING.md"
+    Copy-Item -LiteralPath README.md,README.en.md,LICENSE,THIRD-PARTY-NOTICES.md -Destination $destination
+    New-Item -ItemType Directory -Force "$destination/docs/images" | Out-Null
+    Copy-Item -LiteralPath docs/UI-DESIGN.md,docs/NATIVE-INFRA.md,docs/RELEASING.md,docs/CLI.md,docs/CLI.en.md,docs/DEVELOPMENT.md,docs/DEVELOPMENT.en.md -Destination "$destination/docs"
+    Copy-Item -Path 'docs/images/*' -Destination "$destination/docs/images" -Force
     New-Item -ItemType Directory -Force "$destination/licenses" | Out-Null
     Copy-Item -Path 'licenses/*' -Destination "$destination/licenses" -Force
     $cli = Join-Path $destination 'cli/stemora.exe'

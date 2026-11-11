@@ -19,7 +19,7 @@ try {
 } finally {$zip.Dispose();$stream.Dispose()}
 $verification=[IO.Compression.ZipFile]::OpenRead($ArchivePath)
 try {
-    foreach($entry in @('Stemora.App.exe','cli/stemora.exe','App.xbf','MainWindow.xbf','native/stemora-infra.exe','native/stemora_infra.dll','portable.flag')) {
+    foreach($entry in @('Stemora.App.exe','cli/stemora.exe','App.xbf','MainWindow.xbf','native/stemora-infra.exe','native/stemora_infra.dll','portable.flag','LICENSE','README.md','docs/images/main-window.png')) {
         if(-not $verification.GetEntry($entry)) {throw "Missing archive entry: $entry"}
     }
 } finally {$verification.Dispose()}
