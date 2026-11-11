@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+artifacts/
+.local/
+TestResults/
+*.user
+*.gguf
+*.partial

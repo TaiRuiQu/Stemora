@@ -1,0 +1,24 @@
+# Stemora 界面设计
+
+以微软的 Windows Apps Design / WinUI 3 指南为依据，使用应用已经采用的原生控件。蓝色为用户指定的应用强调色。
+
+## 参考
+
+- Windows design principles: https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/design-principles
+- Typography: https://learn.microsoft.com/en-us/windows/apps/design/style/typography
+- Layout: https://learn.microsoft.com/en-us/windows/apps/design/layout/
+- Color: https://learn.microsoft.com/en-us/windows/apps/design/style/color
+- NavigationView: https://learn.microsoft.com/en-us/windows/apps/design/controls/navigationview
+- Progressive disclosure: https://learn.microsoft.com/en-us/windows/apps/design/basics/design-and-ui-intro
+
+## 实现
+
+- 页面标题采用原生 `TitleTextBlockStyle`，分组标题采用 `SubtitleTextBlockStyle`；正文与辅助信息使用 14 的正文级别。中文内容标记为 `zh-CN`，由系统处理字体与文字渲染。
+- 使用 8、16、24、32 的间距组织内容。浅色、深色的背景、文字、分隔线和控件表面来自 WinUI 语义资源，不自制另一套卡片皮肤。
+- 蓝色用于主操作、链接、选中、进度与音频波形；内容背景保持中性。原生按钮、输入框、列表、复选框保留其交互状态与焦点反馈。
+- 导航只保留音频分离、模型库、设置。页面移除品牌口号、步骤编号、常驻状态徽标与重复边框。
+- 分离设置可折叠，多轨工作台使用统一时间坐标。每轨控制区宽 272，波形高 104，M / S、音量与采样峰值留出独立空间。底部播放控制、共用进度和任务操作固定可见，不随音轨列表滚动。
+- 移除底部装饰分割线和重复的 M / S 帮助文字；按钮解释保留在悬停提示和辅助功能名称中。音轨电平只在播放时显示。
+- 模型库使用对齐的模型、量化、大小和操作列。已下载状态为普通文字，不额外生成徽标；作者信息维持正文可读性。
+- 高级参数、自定义引擎、命令行通过原生 Expander 按需展开；日志放在操作栏的 Flyout 中。
+- 空列表、单文件、浅色、深色、紧凑窗口、模型库、设置、推理中和推理完成状态均通过应用内 `RenderTargetBitmap` 检查。

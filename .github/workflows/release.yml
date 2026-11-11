@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/windows.yml
+
+  release:
+    name: Package and publish Windows release
+    needs: checks
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-2025
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Check tag matches source version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version = $env:RELEASE_TAG -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw 'Use a vMAJOR.MINOR.PATCH tag.' }
+          foreach ($project in Get-ChildItem src -Recurse -Filter '*.csproj') {
+            [xml]$xml = Get-Content $project.FullName
+            if ([string]$xml.Project.PropertyGroup.Version -ne $version) { throw "Version mismatch: $($project.Name)" }
+          }
+          $nativeVersion = $version.Split('-')[0]
+          if (-not (Select-String -Path native/CMakeLists.txt -SimpleMatch "project(StemoraInfra VERSION $nativeVersion LANGUAGES C CXX)" -Quiet)) {
+            throw 'Native CMake version does not match the release tag.'
+          }
+      - name: Build CUDA / CPU runtime and run native checks
+        run: ./scripts/Build-Native.ps1
+      - name: Publish self-contained portable app
+        run: ./scripts/Publish.ps1 -SkipNativeBuild -IncludeRuntime
+      - name: Smoke-test published CLI
+        run: |
+          & ./artifacts/Stemora/cli/stemora.exe models list
+          if ($LASTEXITCODE -ne 0) { throw 'Published CLI smoke test failed.' }
+      - name: Package and create SHA-256 checksum
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $archive = "artifacts/Stemora-$env:RELEASE_TAG-windows-x64.zip"
+          ./scripts/Package.ps1 -ArchivePath $archive
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $([IO.Path]::GetFileName($archive))" | Set-Content artifacts/SHA256SUMS.txt -Encoding ascii
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          $archive = "artifacts/Stemora-$tag-windows-x64.zip"
+          gh release create $tag $archive artifacts/SHA256SUMS.txt --verify-tag --title "Stemora $tag" --generate-notes --draft
+          if ($LASTEXITCODE -ne 0) { throw 'Release creation or asset upload failed.' }
+          if ($tag.Contains('-')) { gh release edit $tag --draft=false --prerelease --latest=false }
+          else { gh release edit $tag --draft=false --latest }
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

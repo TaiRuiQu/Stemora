@@ -1,0 +1,48 @@
+name: Lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: C# / C++ / PowerShell lint
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - name: Install pinned C++ formatter
+        run: python -m pip install clang-format==18.1.8
+      - name: Check source formatting and script syntax
+        shell: pwsh
+        run: ./scripts/Lint.ps1
+
+  workflows:
+    name: GitHub Actions lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install and run actionlint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTIONLINT_VERSION: '1.7.12'
+        run: |
+          set -euo pipefail
+          tool_dir="$(mktemp -d)"
+          gh release download "v${ACTIONLINT_VERSION}" --repo rhysd/actionlint \
+            --pattern "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            --pattern "actionlint_${ACTIONLINT_VERSION}_checksums.txt" --dir "$tool_dir"
+          (cd "$tool_dir" && sha256sum --check --ignore-missing "actionlint_${ACTIONLINT_VERSION}_checksums.txt")
+          tar -xzf "$tool_dir/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -C "$tool_dir" actionlint
+          "$tool_dir/actionlint" -color
