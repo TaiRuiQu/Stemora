@@ -35,5 +35,11 @@ jobs:
           global-json-file: global.json
       - name: Build and test native CPU backend
         run: ./scripts/Build-Native.ps1 -CpuOnly
+      - name: Enable Windows audio codecs for MP3 checks
+        run: |
+          if (-not (Get-WindowsFeature Server-Media-Foundation).Installed) {
+            $feature = Install-WindowsFeature Server-Media-Foundation
+            if (-not $feature.Success) { throw 'Cannot install Media Foundation for audio tests.' }
+          }
       - name: Build WinUI app and run core checks
         run: ./scripts/Build.ps1 -SkipNativeBuild
