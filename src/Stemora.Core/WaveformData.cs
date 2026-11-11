@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using NAudio.Wave;
 
 namespace Stemora.Core;
@@ -14,7 +15,7 @@ public sealed record WaveformData(int SampleRate, int Channels, long Frames, IRe
     {
         using var reader = new AudioFileReader(path);
         var channels = reader.WaveFormat.Channels;
-        if (channels is < 1 or > 2) throw new NotSupportedException("波形预览支持单声道和双声道。");
+        if (channels is < 1 or > 2) throw new NotSupportedException(Tr("波形预览支持单声道和双声道。"));
         var rate = reader.WaveFormat.SampleRate;
         var expectedFrames = Math.Max(1, (long)(reader.TotalTime.TotalSeconds * rate));
         var block = 32;
@@ -53,7 +54,7 @@ public sealed record WaveformData(int SampleRate, int Channels, long Frames, IRe
             }
         }
         Flush();
-        if (frames == 0) throw new InvalidDataException("音频没有采样数据。");
+        if (frames == 0) throw new InvalidDataException(Tr("音频没有采样数据。"));
         var levels = new List<WaveformLevel> { new(block, bins.Select(b => b.ToArray()).ToArray()) };
         while (levels[^1].Channels[0].Length > 1)
         {

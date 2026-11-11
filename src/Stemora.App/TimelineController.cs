@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -20,8 +21,8 @@ public sealed partial class MainWindow
         public required ToggleButton Mute { get; init; }
         public required ToggleButton Solo { get; init; }
         public required Slider Volume { get; init; }
-        public required Border Meter { get; init; }
-        public required Microsoft.UI.Xaml.Shapes.Rectangle MeterFill { get; init; }
+        public required LevelMeter Meter { get; init; }
+        public required TextBlock Label { get; init; }
         public required TextBlock PeakLabel { get; init; }
         public required Grid Row { get; init; }
     }
@@ -40,8 +41,6 @@ public sealed partial class MainWindow
         _timelineTimer.Tick += (_, _) => UpdatePlaybackPosition();
         _timelineTimer.Start();
         TimelineRuler.SizeChanged += (_, _) => DrawTimelineRuler();
-        Root.SizeChanged += (_, _) => TracksScroll.MaxHeight = Math.Max(160, Root.ActualHeight - 550);
-        TracksScroll.MaxHeight = Math.Max(160, Root.ActualHeight - 550);
         PositionSlider.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, _) =>
         {
             _seeking = true; _wasPlaying = _mixer?.IsPlaying == true; _mixer?.Pause();
@@ -66,15 +65,15 @@ public sealed partial class MainWindow
         var tracks = new List<MixerTrack>();
         if (job.Result is { } result)
         {
-            tracks.Add(new("original", "原始混音", job.Path, true));
+            tracks.Add(new("original", Tr("原始混音"), job.Path, true));
             if (result.Tracks is { Count: > 0 }) tracks.AddRange(result.Tracks.Select(t => new MixerTrack(t.Id, t.Label, t.Path)));
             else
             {
-                tracks.AddRange(result.StemPaths.Select((path, i) => new MixerTrack(i == 0 ? "primary" : $"stem_{i}", i == 0 ? "主音轨" : $"音轨 {i + 1}", path)));
-                if (result.ResidualPath != null) tracks.Add(new("residual", "残差伴奏", result.ResidualPath));
+                tracks.AddRange(result.StemPaths.Select((path, i) => new MixerTrack(i == 0 ? "primary" : $"stem_{i}", i == 0 ? Tr("主音轨") : Tr("音轨 {0}", i + 1), path)));
+                if (result.ResidualPath != null) tracks.Add(new("residual", Tr("残差伴奏"), result.ResidualPath));
             }
         }
-        else tracks.Add(new("original", "原始混音", job.Path));
+        else tracks.Add(new("original", Tr("原始混音"), job.Path));
         PreviewSection.Visibility = Visibility.Visible;
         TimelineTransport.Visibility = Visibility.Visible;
         PreviewLabel.Text = job.Name;
@@ -89,10 +88,8 @@ public sealed partial class MainWindow
                 if (_closed) return;
                 _timelineDuration = Math.Max(_timelineDuration, data.Duration);
                 _trackViews[i].Wave.Data = data;
-                _trackViews[i].PeakLabel.Text = $"峰值 {WaveformData.Decibels(data.Peak)}";
-                ToolTipService.SetToolTip(_trackViews[i].PeakLabel, $"采样峰值 {WaveformData.Decibels(data.Peak)} (均方根 {WaveformData.Decibels(data.Rms)})");
+                UpdateTrackDetails(_trackViews[i]);
                 _trackViews[i].Wave.Redraw();
-                TimelineDetails.Text = $"{data.SampleRate:N0} Hz ({data.Channels} 声道，{definitions.Length} 轨)";
                 UpdateTimelineViewport();
             }
             cancellation.Token.ThrowIfCancellationRequested();
@@ -107,7 +104,7 @@ public sealed partial class MainWindow
                 }
                 PlaybackButton.IsEnabled = true;
             }
-            catch (Exception error) { ShowNotice("无法打开音频设备", error.Message, InfoBarSeverity.Warning); }
+            catch (Exception error) { ShowNotice(Tr("无法打开音频设备"), error.Message, InfoBarSeverity.Warning); }
             PositionSlider.Maximum = Math.Max(0.001, _timelineDuration);
             PositionSlider.Value = 0;
             UpdatePlaybackPosition();
@@ -118,28 +115,15 @@ public sealed partial class MainWindow
     }
     private void CreateTrackRow(MixerTrack track, int index)
     {
-        var label = new TextBlock { Text = track.Label, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+        var label = new TextBlock { Text = Strings.StemLabel(track.Id, track.Label), TextTrimming = TextTrimming.CharacterEllipsis, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
         var mute = new ToggleButton { Content = "M", IsChecked = track.Muted, Width = 40, Height = 32, Padding = new Thickness(0) };
         var solo = new ToggleButton { Content = "S", Width = 40, Height = 32, Padding = new Thickness(0) };
-        AutomationProperties.SetName(mute, track.Label + " 静音"); AutomationProperties.SetName(solo, track.Label + " 独听");
-        ToolTipService.SetToolTip(mute, "静音 (Mute)"); ToolTipService.SetToolTip(solo, "独听 (Solo)");
+        AutomationProperties.SetName(mute, Tr("{0} 静音", label.Text)); AutomationProperties.SetName(solo, Tr("{0} 独听", label.Text));
+        ToolTipService.SetToolTip(mute, Tr("静音 (Mute)")); ToolTipService.SetToolTip(solo, Tr("独听 (Solo)"));
         var volume = new Slider { Minimum = 0, Maximum = 100, Value = 100, Width = 120, Height = 32, VerticalAlignment = VerticalAlignment.Center };
-        AutomationProperties.SetName(volume, track.Label + " 音量");
-        var meterFill = new Microsoft.UI.Xaml.Shapes.Rectangle
-        {
-            Fill = new SolidColorBrush(TrackColors[index % TrackColors.Length]),
-            RenderTransform = new ScaleTransform { ScaleX = 0 },
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        var meter = new Border
-        {
-            Height = 4,
-            CornerRadius = new CornerRadius(2),
-            Background = new SolidColorBrush(Color.FromArgb(24, 127, 127, 127)),
-            Child = meterFill,
-            Visibility = Visibility.Collapsed
-        };
-        var peak = new TextBlock { Text = "分析中", Opacity = 0.7 };
+        AutomationProperties.SetName(volume, Tr("{0} 音量", label.Text));
+        var meter = new LevelMeter(TrackColors[index % TrackColors.Length]);
+        var peak = new TextBlock { Text = Tr("分析中"), Opacity = 0.7 };
         var toggles = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         toggles.Children.Add(mute); toggles.Children.Add(solo); toggles.Children.Add(volume);
         var control = new StackPanel { Spacing = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 24, 0) };
@@ -161,7 +145,7 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(272) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         Grid.SetColumn(wave, 1); row.Children.Add(control); row.Children.Add(wave);
-        var ui = new TrackUi { Track = track, Wave = wave, Mute = mute, Solo = solo, Volume = volume, Meter = meter, MeterFill = meterFill, PeakLabel = peak, Row = row };
+        var ui = new TrackUi { Track = track, Wave = wave, Mute = mute, Solo = solo, Volume = volume, Meter = meter, Label = label, PeakLabel = peak, Row = row };
         _trackViews.Add(ui); TracksPanel.Children.Add(row);
         mute.Click += (_, _) => { _mixer?.SetMute(index, mute.IsChecked == true); UpdateTrackEmphasis(); };
         solo.Click += (_, _) => { _mixer?.SetSolo(index, solo.IsChecked == true); UpdateTrackEmphasis(); };
@@ -206,10 +190,9 @@ public sealed partial class MainWindow
         PlaybackGlyph.Glyph = _mixer?.IsPlaying == true ? "\uE769" : "\uE768";
         if (_mixer != null) for (var i = 0; i < _trackViews.Count; i++)
         {
-            _trackViews[i].Meter.Visibility = _mixer.IsPlaying ? Visibility.Visible : Visibility.Collapsed;
-            ((ScaleTransform)_trackViews[i].MeterFill.RenderTransform).ScaleX = _mixer.IsPlaying ? Math.Clamp(_mixer.Channels[i].Peak, 0, 1) : 0;
+            _trackViews[i].Meter.SetLevel(_mixer.IsPlaying ? _mixer.Channels[i].Peak : 0);
         }
-        AutomationProperties.SetName(PlaybackButton, _mixer?.IsPlaying == true ? "暂停" : "播放");
+        AutomationProperties.SetName(PlaybackButton, _mixer?.IsPlaying == true ? Tr("暂停") : Tr("播放"));
         var span = ViewDuration;
         if (_mixer?.IsPlaying == true && _timelineZoom > 1 && (_timelinePosition > _timelineStart + span || _timelinePosition < _timelineStart))
         {

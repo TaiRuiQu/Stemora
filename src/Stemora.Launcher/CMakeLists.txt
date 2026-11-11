@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.25)
+project(StemoraLauncher LANGUAGES CXX RC)
+add_executable(stemora-launcher WIN32 main.cpp launcher.rc)
+set_target_properties(stemora-launcher PROPERTIES OUTPUT_NAME "Stemora.App" CXX_STANDARD 17
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+target_compile_definitions(stemora-launcher PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+if(MSVC)
+  target_compile_options(stemora-launcher PRIVATE /W4 /WX /utf-8)
+elseif(MINGW)
+  target_link_options(stemora-launcher PRIVATE -municode -static -static-libgcc -static-libstdc++)
+endif()

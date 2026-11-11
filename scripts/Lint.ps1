@@ -11,6 +11,7 @@ try {
 
     $nativeFiles = Get-ChildItem native/include,native/src,native/tests -Recurse -File |
         Where-Object Extension -in '.h','.hpp','.cpp' | Select-Object -ExpandProperty FullName
+    $nativeFiles += Join-Path $workspace 'src/Stemora.Launcher/main.cpp'
     [string[]]$clangArguments = if ($Fix) { @('-i') } else { @('--dry-run', '--Werror') }
     & clang-format @clangArguments @nativeFiles
     if ($LASTEXITCODE -ne 0) { throw 'C++ formatting check failed. Run scripts/Lint.ps1 -Fix.' }

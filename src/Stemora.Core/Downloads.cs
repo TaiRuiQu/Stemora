@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -35,12 +36,12 @@ public static class Downloads
         if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
         {
             File.Delete(partial);
-            throw new IOException("下载断点已失效，请重试下载。");
+            throw new IOException(Tr("下载断点已失效，请重试下载。"));
         }
         response.EnsureSuccessStatusCode();
         var append = existing > 0 && response.StatusCode == HttpStatusCode.PartialContent;
         if (response.StatusCode == HttpStatusCode.PartialContent && response.Content.Headers.ContentRange?.From != existing)
-            throw new IOException("服务器返回了不匹配的下载区间。");
+            throw new IOException(Tr("服务器返回了不匹配的下载区间。"));
         if (!append) existing = 0;
         var total = expectedSize ?? (response.Content.Headers.ContentLength is { } length ? existing + length : null);
         await using (var output = new FileStream(partial, append ? FileMode.Append : FileMode.Create,
@@ -56,19 +57,19 @@ public static class Downloads
                 existing += read;
                 if (Environment.TickCount64 - lastReport >= 100)
                 {
-                    progress?.Report(new(existing, total, "下载中"));
+                    progress?.Report(new(existing, total, Tr("下载中")));
                     lastReport = Environment.TickCount64;
                 }
             }
         }
-        progress?.Report(new(existing, total, "校验 SHA-256"));
+        progress?.Report(new(existing, total, Tr("校验 SHA-256")));
         if (!await IsValidAsync(partial, sha256, expectedSize, cancellationToken))
         {
             File.Delete(partial);
-            throw new InvalidDataException("下载文件的大小或 SHA-256 不匹配，文件已丢弃，请重新下载。");
+            throw new InvalidDataException(Tr("下载文件的大小或 SHA-256 不匹配，文件已丢弃，请重新下载。"));
         }
         File.Move(partial, destination, true);
-        progress?.Report(new(existing, total, "下载完成"));
+        progress?.Report(new(existing, total, Tr("下载完成")));
     }
 
     public static async Task<bool> IsValidAsync(string path, string hash, long? size, CancellationToken ct = default)

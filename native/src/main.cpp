@@ -27,7 +27,7 @@ int run(const std::vector<std::string> &args) {
     try {
         if (args.size() < 2 || args[1] == "--help" || args[1] == "help") {
             std::cout
-                << "Stemora Infra 0.2.0\n"
+                << "Stemora Infra 0.3.0\n"
                    "  stemora-infra probe --model model.gguf [--profile bs_roformer_sw] [--stems bass,drums,...]\n"
                    "  stemora-infra separate --model model.gguf --input input.wav --output-dir ./stems\n"
                    "    [--device auto|cpu|cuda] [--chunk-size 588800] [--overlap 2] [--threads 8]\n";

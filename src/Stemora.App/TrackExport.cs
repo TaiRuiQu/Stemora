@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Stemora.Core;
@@ -14,9 +15,9 @@ public sealed partial class MainWindow
         if (_exportCancellation != null || QueueList.SelectedItem is not AudioJob { Result: { } result }) return;
         var tracks = result.Tracks is { Count: > 0 } ? result.Tracks.ToList()
             : result.StemPaths.Select((path, i) => new StemResult(i == 0 ? "primary" : $"stem_{i}",
-                i == 0 ? "主音轨" : $"音轨 {i + 1}", path)).ToList();
+                i == 0 ? Tr("主音轨") : Tr("音轨 {0}", i + 1), path)).ToList();
         if (result.ResidualPath is { } residual && !tracks.Any(track => track.Path.Equals(residual, StringComparison.OrdinalIgnoreCase)))
-            tracks.Add(new("residual", "残差伴奏", residual));
+            tracks.Add(new("residual", Tr("残差伴奏"), residual));
         if (tracks.Count == 0) return;
 
         using var cancellation = new CancellationTokenSource();
@@ -26,22 +27,22 @@ public sealed partial class MainWindow
         {
             var format = new ComboBox
             {
-                Header = "导出格式",
+                Header = Tr("导出格式"),
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
-            foreach (var label in new[] { "WAV · 32 位浮点", "WAV · 24 位 PCM", "WAV · 16 位 PCM", "MP3 · 320 kbps" })
+            foreach (var label in new[] { Tr("WAV (32 位浮点)"), Tr("WAV (24 位 PCM)"), Tr("WAV (16 位 PCM)"), "MP3 (320 kbps)" })
                 format.Items.Add(new ComboBoxItem { Content = label });
             format.SelectedIndex = (int)_settings.Encoding;
             var content = new StackPanel { Spacing = 12, MinWidth = 300 };
-            content.Children.Add(new TextBlock { Text = "选择要导出的音轨" });
-            var choices = tracks.Select(track => new CheckBox { Content = track.Label, IsChecked = true }).ToArray();
+            content.Children.Add(new TextBlock { Text = Tr("选择要导出的音轨") });
+            var choices = tracks.Select(track => new CheckBox { Content = Strings.StemLabel(track.Id, track.Label), IsChecked = true }).ToArray();
             var list = new StackPanel { Spacing = 4 };
             foreach (var choice in choices) list.Children.Add(choice);
             content.Children.Add(new ScrollViewer { Content = list, MaxHeight = 260 });
             content.Children.Add(format);
             content.Children.Add(new TextBlock
             {
-                Text = "导出完整分离音轨，试听的静音、独听和音量不影响文件。",
+                Text = Tr("导出完整分离音轨，试听的静音、独听和音量不影响文件。"),
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 380,
                 Opacity = 0.7
@@ -49,10 +50,10 @@ public sealed partial class MainWindow
             var dialog = new ContentDialog
             {
                 XamlRoot = Root.XamlRoot,
-                Title = "导出音轨",
+                Title = Tr("导出音轨"),
                 Content = content,
-                PrimaryButtonText = "选择保存位置",
-                CloseButtonText = "取消",
+                PrimaryButtonText = Tr("选择保存位置"),
+                CloseButtonText = Tr("取消"),
                 DefaultButton = ContentDialogButton.Primary
             };
             foreach (var choice in choices)
@@ -80,9 +81,9 @@ public sealed partial class MainWindow
             });
             await AudioExporter.ExportAsync(selected, destination, mp3 ? AudioExportFormat.Mp3 : AudioExportFormat.Wav,
                 encoding, progress, cancellation.Token);
-            ShowNotice("音轨已导出", $"{selected.Length} 条 {(mp3 ? "MP3" : "WAV")} 音轨已保存到 {destination}", InfoBarSeverity.Success);
+            ShowNotice(Tr("音轨已导出"), Tr("{0} 条 {1} 音轨已保存到 {2}", selected.Length, (mp3 ? "MP3" : "WAV"), destination), InfoBarSeverity.Success);
         }
-        catch (OperationCanceledException) { ShowNotice("导出已取消", "可以重新选择音轨和格式后导出。", InfoBarSeverity.Informational); }
+        catch (OperationCanceledException) { ShowNotice(Tr("导出已取消"), Tr("可以重新选择音轨和格式后导出。"), InfoBarSeverity.Informational); }
         catch (Exception error) { ShowError(error); }
         finally
         {

@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -18,12 +19,18 @@ internal static class Program
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
         try
         {
-            if (args.Any(a => a is "--help" or "-h")) { PrintHelp(); return 0; }
             var parsed = Arguments.Parse(args);
-            if (parsed.Command.Count == 0 || parsed.Command[0] is "help" or "--help" or "-h") { PrintHelp(); return 0; }
-            if (parsed.Command[0] is "--version" or "version") { Emit("version", new { version = "0.2.0" }); return 0; }
             var paths = new AppPaths(parsed.Get("home"));
+            var help = args.Any(a => a is "--help" or "-h") || parsed.Command.Count == 0 || parsed.Command[0] == "help";
+            if (help)
+            {
+                try { Strings.SetLanguage(paths.LoadSettings().Language); }
+                catch (Exception error) when (error is IOException or JsonException or UnauthorizedAccessException) { }
+                PrintHelp(); return 0;
+            }
+            if (parsed.Command[0] is "--version" or "version") { Emit("version", new { version = "0.3.0" }); return 0; }
             var settings = paths.LoadSettings();
+            Strings.SetLanguage(settings.Language);
             var ct = cancellation.Token;
             var downloadProgress = new InlineProgress<DownloadProgress>(p => EmitProgress("download", p.Fraction, p.Message, p.Received, p.Total));
             switch (string.Join(' ', parsed.Command))
@@ -35,7 +42,10 @@ internal static class Program
                         m.DisplayName,
                         m.Author,
                         m.Architecture,
+                        m.Quantization,
                         m.Size,
+                        m.Hardware,
+                        m.ExportFormats,
                         family = m.Profile ?? m.Architecture,
                         stems = m.Stems,
                         repository = m.Repository,
@@ -43,12 +53,12 @@ internal static class Program
                         path = new ModelRepository(paths).GetPath(m)
                     }).ToArray();
                     if (_json) Emit("models", models);
-                    else foreach (var m in models) Console.WriteLine($"{m.Id,-20} {m.DisplayName,-40} {m.Size / 1048576d,7:F1} MB  {(m.installed ? "已下载" : "未下载")}");
+                    else foreach (var m in models) Console.WriteLine($"{m.Id,-20} {m.DisplayName,-40} {m.Size / 1048576d,7:F1} MB  {(m.installed ? Tr("已下载") : Tr("未下载"))}");
                     return 0;
                 case "models download":
                     var id = parsed.Required("id");
                     var model = ModelRepository.Catalog.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
-                        ?? throw new ArgumentException($"未知模型 ID：{id}。运行 models list 查看。");
+                        ?? throw new ArgumentException(Tr("未知模型 ID：{0}。运行 models list 查看。", id));
                     var modelPath = await new ModelRepository(paths).DownloadAsync(model, downloadProgress, ct);
                     Emit("completed", new { modelPath });
                     return 0;
@@ -77,14 +87,14 @@ internal static class Program
                         modelPath = selected,
                         modelValid = validModel,
                         modelError,
-                        note = "检查文件与 GGUF 头；实际 GPU 可用性在首次推理时由引擎检测。"
+                        note = Tr("检查文件与 GGUF 头；实际 GPU 可用性在首次推理时由引擎检测。")
                     });
                     return engine != null && validModel ? 0 : 2;
                 case "separate":
                     var input = parsed.Required("input");
-                    var selectedModel = parsed.Get("model") ?? settings.ModelPath ?? throw new ArgumentException("需要 --model <模型.gguf>。");
+                    var selectedModel = parsed.Get("model") ?? settings.ModelPath ?? throw new ArgumentException(Tr("需要 --model <模型.gguf>。"));
                     var timeout = parsed.Integer("timeout");
-                    if (timeout is <= 0) throw new ArgumentException("--timeout 必须大于零。");
+                    if (timeout is <= 0) throw new ArgumentException(Tr("--timeout 必须大于零。"));
                     if (timeout.HasValue) cancellation.CancelAfter(TimeSpan.FromSeconds(timeout.Value));
                     var options = new SeparationOptions(input, selectedModel, parsed.Get("output") ?? settings.OutputDirectory,
                         ParseDevice(parsed.Get("device"), settings.Device), parsed.Integer("chunk-size") ?? settings.ChunkSize,
@@ -95,17 +105,17 @@ internal static class Program
                         new InlineProgress<SeparationProgress>(p => EmitProgress(p.Stage, p.Fraction, p.Message)), ct);
                     Emit("completed", result);
                     return 0;
-                default: throw new ArgumentException("未知命令，运行 stemora help 查看用法。");
+                default: throw new ArgumentException(Tr("未知命令，运行 stemora help 查看用法。"));
             }
         }
-        catch (OperationCanceledException) { EmitError("cancelled", "操作已取消或超时。"); return 130; }
+        catch (OperationCanceledException) { EmitError("cancelled", Tr("操作已取消或超时。")); return 130; }
         catch (ArgumentException ex) { EmitError("invalid_arguments", ex.Message); return 2; }
         catch (Exception ex) { EmitError("operation_failed", ex.Message); return 1; }
     }
     private static ComputeDevice ParseDevice(string? value, ComputeDevice fallback) => value switch
-    { null => fallback, "auto" => ComputeDevice.Auto, "cpu" => ComputeDevice.Cpu, "cuda" => ComputeDevice.Cuda, _ => throw new ArgumentException("--device 需要 auto、cpu 或 cuda。") };
+    { null => fallback, "auto" => ComputeDevice.Auto, "cpu" => ComputeDevice.Cpu, "cuda" => ComputeDevice.Cuda, _ => throw new ArgumentException(Tr("--device 需要 auto、cpu 或 cuda。")) };
     private static WavEncoding ParseEncoding(string? value, WavEncoding fallback) => value switch
-    { null => fallback, "float32" => WavEncoding.Float32, "pcm24" => WavEncoding.Pcm24, "pcm16" => WavEncoding.Pcm16, _ => throw new ArgumentException("--format 需要 float32、pcm24 或 pcm16。") };
+    { null => fallback, "float32" => WavEncoding.Float32, "pcm24" => WavEncoding.Pcm24, "pcm16" => WavEncoding.Pcm16, _ => throw new ArgumentException(Tr("--format 需要 float32、pcm24 或 pcm16。")) };
     private static void EmitProgress(string stage, double? fraction, string message, long? received = null, long? total = null)
     {
         lock (OutputLock)
@@ -123,29 +133,36 @@ internal static class Program
     private static void EmitError(string code, string message)
     {
         if (_json) Emit("error", new { code, message });
-        else Console.Error.WriteLine($"错误：{message}");
+        else Console.Error.WriteLine(Tr("错误：{0}", message));
     }
-    private static void PrintHelp() => Console.WriteLine("""
-        Stemora 0.2.0 (多模型 GGUF 本地音频分离)
+    private static void PrintHelp()
+    {
+        Console.WriteLine(Tr("Stemora 0.3.0 (多模型 GGUF 本地音频分离)"));
+        Console.WriteLine("""
 
-        stemora runtime install [--flavor cuda|cpu]
-        stemora models list
-        stemora models download --id anvuew-q8_0
-        stemora models download --id bs-roformer-sw-q8_0
-        stemora models inspect --model model.gguf
-        stemora doctor [--model model.gguf] [--engine bs_roformer-cli.exe]
-        stemora separate --input song.mp3 --model model.gguf --output ./stems
-          [--device auto|cpu|cuda] [--overlap 2] [--chunk-size 352800]
-          [--format float32|pcm24|pcm16] [--no-residual] [--timeout 600]
-          [--engine bs_roformer-cli.exe]
-          [--profile bs_roformer_sw] [--stems bass,drums,other,vocals,guitar,piano]
+            stemora runtime install [--flavor cuda|cpu]
+            stemora models list
+            stemora models download --id anvuew-q8_0
+            stemora models download --id bs-roformer-sw-q8_0
+            stemora models inspect --model model.gguf
+            stemora doctor [--model model.gguf] [--engine stemora-infra.exe]
+            stemora separate --input song.mp3 --model model.gguf --output ./stems
+              [--device auto|cpu|cuda] [--overlap 2] [--chunk-size 352800]
+              [--format float32|pcm24|pcm16] [--no-residual] [--timeout 600]
+              [--engine stemora-infra.exe]
+              [--profile bs_roformer_sw] [--stems bass,drums,other,vocals,guitar,piano]
 
-        通用参数：--json 输出 UTF-8 NDJSON；--home 指定数据目录（或 STEMORA_HOME）。
-        多轨模型按模型音轨名称导出；SW 输出 bass/drums/other/vocals/guitar/piano.wav。
-        每次分离创建独立输出文件夹；单轨模型可另导出 residual.wav。
-        退出码：0 成功；1 操作失败；2 参数或环境不完整；130 取消/超时。
-        自动模式优先 CUDA；CPU 模式仅 CPU；CUDA 模式不可用时明确报错。
-        """);
+            """);
+        foreach (var line in new[]
+        {
+            Tr("通用参数：--json 输出 UTF-8 NDJSON；--home 指定数据目录（或 STEMORA_HOME）。"),
+            Tr("多轨模型按模型音轨名称导出；SW 输出 bass/drums/other/vocals/guitar/piano.wav。"),
+            Tr("每次分离创建独立输出文件夹；单轨模型可另导出 residual.wav。"),
+            Tr("退出码：0 成功；1 操作失败；2 参数或环境不完整；130 取消/超时。"),
+            Tr("自动模式优先 CUDA；CPU 模式仅 CPU；CUDA 模式不可用时明确报错。")
+        }) Console.WriteLine(line);
+    }
+
 }
 
 internal sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
@@ -159,9 +176,9 @@ internal sealed class Arguments
     public List<string> Command { get; } = [];
     public string? Get(string name) => _options.GetValueOrDefault(name);
     public bool Has(string name) => _options.ContainsKey(name);
-    public string Required(string name) => Get(name) ?? throw new ArgumentException($"缺少 --{name}。");
+    public string Required(string name) => Get(name) ?? throw new ArgumentException(Tr("缺少 --{0}。", name));
     public int? Integer(string name) => Get(name) is { } value
-        ? int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : throw new ArgumentException($"--{name} 需要整数。") : null;
+        ? int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : throw new ArgumentException(Tr("--{0} 需要整数。", name)) : null;
     public static Arguments Parse(string[] args)
     {
         var result = new Arguments();
@@ -171,14 +188,14 @@ internal sealed class Arguments
         {
             if (!args[i].StartsWith("--", StringComparison.Ordinal) || args[i] is "--help" or "--version") { result.Command.Add(args[i]); continue; }
             var name = args[i][2..];
-            if (result.Has(name)) throw new ArgumentException($"重复参数 --{name}。");
+            if (result.Has(name)) throw new ArgumentException(Tr("重复参数 --{0}。", name));
             if (flags.Contains(name)) result._options.Add(name, null);
             else if (values.Contains(name))
             {
-                if (i + 1 >= args.Length || args[i + 1].StartsWith("--", StringComparison.Ordinal)) throw new ArgumentException($"--{name} 缺少值。");
+                if (i + 1 >= args.Length || args[i + 1].StartsWith("--", StringComparison.Ordinal)) throw new ArgumentException(Tr("--{0} 缺少值。", name));
                 result._options.Add(name, args[++i]);
             }
-            else throw new ArgumentException($"未知参数 --{name}。");
+            else throw new ArgumentException(Tr("未知参数 --{0}。", name));
         }
         return result;
     }

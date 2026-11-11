@@ -10,7 +10,7 @@
 
 Stemora 是一款免费的本地音频分离工具，适合 Remix、翻唱、采样、混音练习和视频制作。它不依赖 Python 环境，不上传音频，也不需要安装服务端。
 
-**[下载最新版本](https://github.com/TaiRuiQu/Stemora/releases/latest)** · [快速上手](#快速上手) · [常见问题](#常见问题)
+**[下载最新版本](https://github.com/TaiRuiQu/Stemora/releases/latest)** / [快速上手](#快速上手) / [常见问题](#常见问题)
 
 ![Stemora 主界面](docs/images/main-window.png)
 
@@ -23,6 +23,7 @@ Stemora 是一款免费的本地音频分离工具，适合 Remix、翻唱、采
 - **模型库**：在应用内浏览和下载模型，支持断点续传与 SHA-256 校验，也可以导入本地 GGUF 模型。
 - **CUDA / CPU**：有 NVIDIA 显卡时自动加速，没有也能用 CPU 完成分离。
 - **批量处理**：可一次加入多个文件，任务逐个执行。
+- **中英双语**：在设置中切换 English / 简体中文，或跟随系统，立即生效并保存。
 
 ## 系统要求
 
@@ -42,7 +43,7 @@ Stemora 是一款免费的本地音频分离工具，适合 Remix、翻唱、采
 2. 解压到任意有写入权限的目录，例如 `D:\Apps\Stemora`。不要只把 exe 单独复制出来，`native`、`cli` 等文件夹需要一起保留。
 3. 双击 `Stemora.App.exe` 启动。
 
-这是便携版：不需要安装，删除文件夹即可卸载。建议不要放在 `C:\Program Files`，因为程序需要在旁边保存模型和设置。
+这是便携版：不需要安装，删除文件夹即可卸载。顶层的 `Stemora.App.exe` 是启动入口，运行依赖集中在 `app`，仅保留英文和简体中文资源；请保留 `app`、`native`、`cli` 文件夹。建议不要放在 `C:\Program Files`，因为程序需要在旁边保存模型和设置。
 
 发布页的 `SHA256SUMS.txt` 提供了压缩包的 SHA-256，可用于校验下载。
 
@@ -89,14 +90,16 @@ Stemora 是一款免费的本地音频分离工具，适合 Remix、翻唱、采
 
 模型库提供多个模型家族和量化版本。不知道选哪个时：
 
+可以按量化类型、输出音轨、单轨/多轨、运行平台、模型架构和导出格式组合筛选。模型条目展示输出内容、CPU / CUDA 支持和建议内存、显存容量；实测结果与估算方法见[本机资源测试](docs/MODEL-MEMORY.md)。
+
 | 需求 | 推荐 |
 | --- | --- |
 | 一次拆出完整乐队分轨 | **BS Roformer SW**（六轨） |
 | 主要提取人声或伴奏 | **BS-RoFormer** / **Mel-Band Roformer** 人声模型 |
-| 电脑较慢、想减少体积 | 同模型的 **Q4_0** / **Q5_0** 版本 |
+| 想减少模型文件体积 | 同模型的 **Q4_0** / **Q5_0** 版本 |
 | 追求更高质量 | **Q8_0** 或 **FP16 / FP32** 版本 |
 
-关于量化：`Q8_0` 通常在体积和效果之间比较均衡，适合大多数用户；`Q4_0` 最小、最快，但可能有更多细节损失；`FP16` / `FP32` 体积最大，需要更多内存和显存。
+关于量化：`Q8_0` 通常在体积和效果之间比较均衡；`Q4_0` 文件更小，但可能有更多细节损失；`FP16` / `FP32` 文件更大。速度与峰值占用还取决于运行内核和分块，不能只按文件大小判断，详见[本机资源测试](docs/MODEL-MEMORY.md)。
 
 模型库中的文件来自 [BSRoformer-GGUF](https://huggingface.co/chenmozhijin/BSRoformer-GGUF) 与 [BS-RoFormer-SW-6stem](https://huggingface.co/FractalSurfer/BS-RoFormer-SW-6stem) 等仓库，具体作者和许可证见各模型卡。
 

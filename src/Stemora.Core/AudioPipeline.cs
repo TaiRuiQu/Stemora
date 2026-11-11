@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -11,12 +12,12 @@ public static class AudioPipeline
     public static double Prepare(string source, string destination, IProgress<SeparationProgress>? progress, CancellationToken ct)
     {
         using var reader = new AudioFileReader(source);
-        if (reader.TotalTime <= TimeSpan.Zero) throw new InvalidDataException("音频为空或无法读取时长。");
+        if (reader.TotalTime <= TimeSpan.Zero) throw new InvalidDataException(Tr("音频为空或无法读取时长。"));
         if (reader.TotalTime.TotalSeconds * SampleRate * 8 > uint.MaxValue - 4096)
-            throw new InvalidDataException("音频过长，超过 WAV 的 4 GB 限制，请先拆分音频。");
+            throw new InvalidDataException(Tr("音频过长，超过 WAV 的 4 GB 限制，请先拆分音频。"));
         ISampleProvider samples = reader;
         if (samples.WaveFormat.Channels == 1) samples = new MonoToStereoSampleProvider(samples);
-        else if (samples.WaveFormat.Channels != 2) throw new NotSupportedException("目前支持单声道和双声道音频，请先将环绕声混缩为双声道。");
+        else if (samples.WaveFormat.Channels != 2) throw new NotSupportedException(Tr("目前支持单声道和双声道音频，请先将环绕声混缩为双声道。"));
         if (samples.WaveFormat.SampleRate != SampleRate) samples = new WdlResamplingSampleProvider(samples, SampleRate);
         using var writer = new WaveFileWriter(destination, WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 2));
         var buffer = new float[32768];
@@ -26,12 +27,12 @@ public static class AudioPipeline
         {
             ct.ThrowIfCancellationRequested();
             for (var i = 0; i < read; i++)
-                if (!float.IsFinite(buffer[i])) throw new InvalidDataException("输入音频包含非有限数值。");
+                if (!float.IsFinite(buffer[i])) throw new InvalidDataException(Tr("输入音频包含非有限数值。"));
             writer.WriteSamples(buffer, 0, read);
             total += read;
         }
-        if (total == 0) throw new InvalidDataException("音频没有可解码的采样数据。");
-        progress?.Report(new("prepare", 0.08, "音频已转换为 44.1 kHz 双声道"));
+        if (total == 0) throw new InvalidDataException(Tr("音频没有可解码的采样数据。"));
+        progress?.Report(new("prepare", 0.08, Tr("音频已转换为 44.1 kHz 双声道")));
         return total / (double)(SampleRate * 2);
     }
 
@@ -55,7 +56,7 @@ public static class AudioPipeline
         using var output = new AudioFileReader(stemPath);
         ValidateOutputFormat(output.WaveFormat);
         if (output.Length == 0 || input.Length != output.Length)
-            throw new InvalidDataException("模型输出的采样长度与输入不一致，导出已停止。");
+            throw new InvalidDataException(Tr("模型输出的采样长度与输入不一致，导出已停止。"));
     }
 
     public static void ExportResidual(string mixture, string primary, string destination, WavEncoding encoding, CancellationToken ct)
@@ -64,7 +65,7 @@ public static class AudioPipeline
         using var target = new AudioFileReader(primary);
         ValidateOutputFormat(input.WaveFormat);
         ValidateOutputFormat(target.WaveFormat);
-        if (input.Length != target.Length) throw new InvalidDataException("模型输出的采样长度与输入不一致，无法生成对齐的残差音轨。");
+        if (input.Length != target.Length) throw new InvalidDataException(Tr("模型输出的采样长度与输入不一致，无法生成对齐的残差音轨。"));
         using var writer = CreateWriter(destination, encoding);
         var sourceBuffer = new float[32768];
         var targetBuffer = new float[32768];
@@ -76,7 +77,7 @@ public static class AudioPipeline
             while (got < read)
             {
                 var n = target.Read(targetBuffer, got, read - got);
-                if (n == 0) throw new InvalidDataException("模型输出意外截断。");
+                if (n == 0) throw new InvalidDataException(Tr("模型输出意外截断。"));
                 got += n;
             }
             for (var i = 0; i < read; i++) sourceBuffer[i] -= targetBuffer[i];
@@ -107,7 +108,7 @@ public static class AudioPipeline
     private static void ValidateOutputFormat(WaveFormat format)
     {
         if (format.SampleRate != SampleRate || format.Channels != 2)
-            throw new InvalidDataException("推理输出必须为 44.1 kHz 双声道 WAV。");
+            throw new InvalidDataException(Tr("推理输出必须为 44.1 kHz 双声道 WAV。"));
     }
     private static WaveFileWriter CreateWriter(string path, WavEncoding encoding) => new(path,
         encoding == WavEncoding.Float32 ? WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, 2)
@@ -116,7 +117,7 @@ public static class AudioPipeline
     {
         for (var i = 0; i < count; i++)
         {
-            if (!float.IsFinite(buffer[i])) throw new InvalidDataException("模型输出包含非有限数值，导出已停止。");
+            if (!float.IsFinite(buffer[i])) throw new InvalidDataException(Tr("模型输出包含非有限数值，导出已停止。"));
             if (encoding != WavEncoding.Float32) buffer[i] = Math.Clamp(buffer[i], -1f, 1f);
         }
         writer.WriteSamples(buffer, 0, count);

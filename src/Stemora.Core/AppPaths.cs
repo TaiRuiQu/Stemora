@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using System.Text.Json;
 
 namespace Stemora.Core;
@@ -31,7 +32,7 @@ public sealed class AppPaths
         if (!File.Exists(SettingsFile)) return new();
         // Invalid settings are reported, never silently overwritten.
         var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsFile), JsonDefaults.Options)
-            ?? throw new InvalidDataException($"设置文件无效：{SettingsFile}");
+            ?? throw new InvalidDataException(Tr("设置文件无效：{0}", SettingsFile));
         return settings with
         {
             ModelPath = ResolvePath(settings.ModelPath),

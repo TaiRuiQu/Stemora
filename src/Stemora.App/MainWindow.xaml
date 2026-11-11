@@ -3,7 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Stemora.App"
     Title="Stemora">
-  <Grid x:Name="Root" Language="zh-CN" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+  <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
     <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="*" /></Grid.RowDefinitions>
     <Grid x:Name="TitleBar" Padding="16,0" Background="Transparent">
       <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
@@ -15,17 +15,18 @@
         IsBackButtonVisible="Collapsed" IsPaneToggleButtonVisible="False" IsSettingsVisible="True"
         SelectionChanged="Navigation_SelectionChanged">
       <NavigationView.MenuItems>
-        <NavigationViewItem Content="音频分离" Tag="separate" IsSelected="True"><NavigationViewItem.Icon><FontIcon Glyph="&#xE8D6;" /></NavigationViewItem.Icon></NavigationViewItem>
-        <NavigationViewItem Content="模型库" Tag="models"><NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem local:Loc.Content="音频分离" Tag="separate" IsSelected="True"><NavigationViewItem.Icon><FontIcon Glyph="&#xE8D6;" /></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem local:Loc.Content="模型库" Tag="models"><NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon></NavigationViewItem>
       </NavigationView.MenuItems>
       <Grid Padding="32,24,32,0">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True" Margin="0,0,0,16" />
         <ScrollViewer x:Name="ContentScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <Grid Padding="0,0,0,32">
+          <!-- WinUI overlays its 16px scrollbar: reserve a 24px gutter for it. -->
+          <Grid Padding="0,0,24,32">
             <StackPanel x:Name="SeparatePage" Spacing="32" MaxWidth="1400" HorizontalAlignment="Stretch">
-              <TextBlock Text="音频分离" Style="{StaticResource TitleTextBlockStyle}" />
-              <Expander x:Name="SetupExpander" Header="音频与分离设置" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+              <TextBlock local:Loc.Text="音频分离" Style="{StaticResource TitleTextBlockStyle}" />
+              <Expander x:Name="SetupExpander" local:Loc.Header="音频与分离设置" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
               <Grid x:Name="Workspace" HorizontalAlignment="Stretch" ColumnSpacing="32" SizeChanged="Workspace_SizeChanged">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="280" /><ColumnDefinition Width="300" /></Grid.ColumnDefinitions>
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
@@ -33,20 +34,20 @@
                   <StackPanel Spacing="16" AllowDrop="True" DragOver="Input_DragOver" Drop="Input_Drop">
                     <Grid ColumnSpacing="12">
                       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                      <TextBlock Text="音频" Style="{StaticResource SectionHeading}" VerticalAlignment="Center" />
+                      <TextBlock local:Loc.Text="音频" Style="{StaticResource SectionHeading}" VerticalAlignment="Center" />
                       <TextBlock x:Name="QueueCount" Grid.Column="1" Text="" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" TextWrapping="NoWrap" />
                       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="AddButton" Click="AddFiles_Click"><StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE710;" FontSize="14" /><TextBlock Text="添加音频" /></StackPanel></Button>
-                        <Button x:Name="ClearButton" Content="清空" Click="Clear_Click" IsEnabled="False" />
+                        <Button x:Name="AddButton" Click="AddFiles_Click"><StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE710;" FontSize="14" /><TextBlock local:Loc.Text="添加音频" /></StackPanel></Button>
+                        <Button x:Name="ClearButton" local:Loc.Content="清空" Click="Clear_Click" IsEnabled="False" />
                       </StackPanel>
                     </Grid>
                     <Border x:Name="DropArea" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Background="{ThemeResource ControlAltFillColorTertiaryBrush}" Padding="24,48">
                       <StackPanel HorizontalAlignment="Center" Spacing="16">
                         <FontIcon Glyph="&#xE8B7;" FontSize="32" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <StackPanel Spacing="8"><TextBlock Text="添加要分离的音频" Style="{StaticResource BodyLargeTextBlockStyle}" HorizontalAlignment="Center" /><TextBlock Text="拖放文件到此处，或选择“添加音频”。" Style="{StaticResource SecondaryText}" TextAlignment="Center" /></StackPanel>
+                        <StackPanel Spacing="8"><TextBlock local:Loc.Text="添加要分离的音频" Style="{StaticResource BodyLargeTextBlockStyle}" HorizontalAlignment="Center" /><TextBlock local:Loc.Text="拖放文件到此处，或选择“添加音频”。" Style="{StaticResource SecondaryText}" TextAlignment="Center" /></StackPanel>
                       </StackPanel>
                     </Border>
-                    <ListView x:Name="QueueList" MaxHeight="288" Visibility="Collapsed" SelectionMode="Single" SelectionChanged="Queue_SelectionChanged" BorderThickness="1" CornerRadius="4" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" HorizontalContentAlignment="Stretch" AutomationProperties.Name="待分离音频">
+                    <ListView x:Name="QueueList" MaxHeight="288" Visibility="Collapsed" SelectionMode="Single" SelectionChanged="Queue_SelectionChanged" BorderThickness="1" CornerRadius="4" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" HorizontalContentAlignment="Stretch" local:Loc.Name="待分离音频">
                       <ListView.ItemTemplate>
                         <DataTemplate x:DataType="local:AudioJob">
                           <Grid Padding="8,12" ColumnSpacing="16">
@@ -61,89 +62,108 @@
                   </StackPanel>
                 </StackPanel>
                 <StackPanel x:Name="ConfigColumn" Grid.Column="1" Spacing="24">
-                  <TextBlock Text="分离设置" Style="{StaticResource SectionHeading}" />
-                  <StackPanel Spacing="8"><Grid><TextBlock Text="模型" VerticalAlignment="Center" /><HyperlinkButton Content="管理模型" HorizontalAlignment="Right" Padding="0" Click="ManageModels_Click" /></Grid><ComboBox x:Name="ModelCombo" PlaceholderText="选择模型" DisplayMemberPath="Label" HorizontalAlignment="Stretch" SelectionChanged="ModelCombo_SelectionChanged" AutomationProperties.Name="分离模型" /><TextBlock x:Name="ModelStemSummary" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" /></StackPanel>
-                  <ComboBox x:Name="DeviceCombo" Header="计算设备" SelectedIndex="0" HorizontalAlignment="Stretch"><ComboBoxItem Content="自动（优先 CUDA）" /><ComboBoxItem Content="仅 CPU" /><ComboBoxItem Content="CUDA" /></ComboBox>
-                  <ComboBox x:Name="FormatCombo" Header="WAV 格式" SelectedIndex="0" HorizontalAlignment="Stretch"><ComboBoxItem Content="32 位浮点" /><ComboBoxItem Content="24 位 PCM" /><ComboBoxItem Content="16 位 PCM" /></ComboBox>
-                  <CheckBox x:Name="ResidualCheck" Content="导出残差伴奏" IsChecked="True" ToolTipService.ToolTip="残差伴奏由原音频减去模型的首个输出得到。" />
-                  <Expander x:Name="AdvancedOptions" Header="高级选项" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="16" HorizontalAlignment="Stretch"><NumberBox x:Name="OverlapBox" Header="重叠次数" PlaceholderText="模型默认" Minimum="1" Maximum="32" SmallChange="1" SpinButtonPlacementMode="Compact" /><NumberBox x:Name="ChunkBox" Header="分块大小（采样点）" PlaceholderText="模型默认" Minimum="8192" Maximum="3528000" SmallChange="44100" /><TextBlock Text="留空使用模型默认值。" Style="{StaticResource SecondaryText}" /></StackPanel></Expander>
-                  <StackPanel Spacing="12"><TextBox x:Name="OutputBox" Header="输出位置" ToolTipService.ToolTip="{Binding Text, ElementName=OutputBox}" /><Grid><Button Content="更改位置" Click="PickOutput_Click" /><HyperlinkButton Content="打开文件夹" HorizontalAlignment="Right" Click="OpenOutput_Click" /></Grid></StackPanel>
+                  <TextBlock local:Loc.Text="分离设置" Style="{StaticResource SectionHeading}" />
+                  <StackPanel Spacing="8"><Grid><TextBlock local:Loc.Text="模型" VerticalAlignment="Center" /><HyperlinkButton local:Loc.Content="管理模型" HorizontalAlignment="Right" Padding="0" Click="ManageModels_Click" /></Grid><ComboBox x:Name="ModelCombo" local:Loc.Placeholder="选择模型" DisplayMemberPath="Label" HorizontalAlignment="Stretch" SelectionChanged="ModelCombo_SelectionChanged" local:Loc.Name="分离模型" /><TextBlock x:Name="ModelStemSummary" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" /></StackPanel>
+                  <ComboBox x:Name="DeviceCombo" local:Loc.Header="计算设备" SelectedIndex="0" HorizontalAlignment="Stretch"><ComboBoxItem local:Loc.Content="自动（优先 CUDA）" /><ComboBoxItem local:Loc.Content="仅 CPU" /><ComboBoxItem Content="CUDA" /></ComboBox>
+                  <ComboBox x:Name="FormatCombo" local:Loc.Header="WAV 格式" SelectedIndex="0" HorizontalAlignment="Stretch"><ComboBoxItem local:Loc.Content="32 位浮点" /><ComboBoxItem local:Loc.Content="24 位 PCM" /><ComboBoxItem local:Loc.Content="16 位 PCM" /></ComboBox>
+                  <CheckBox x:Name="ResidualCheck" local:Loc.Content="导出残差伴奏" IsChecked="True" local:Loc.ToolTip="残差伴奏由原音频减去模型的首个输出得到。" />
+                  <Expander x:Name="AdvancedOptions" local:Loc.Header="高级选项" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="16" HorizontalAlignment="Stretch"><NumberBox x:Name="OverlapBox" local:Loc.Header="重叠次数" local:Loc.Placeholder="模型默认" Minimum="1" Maximum="32" SmallChange="1" SpinButtonPlacementMode="Compact" /><NumberBox x:Name="ChunkBox" local:Loc.Header="分块大小（采样点）" local:Loc.Placeholder="模型默认" Minimum="8192" Maximum="3528000" SmallChange="44100" /><TextBlock local:Loc.Text="留空使用模型默认值。" Style="{StaticResource SecondaryText}" /></StackPanel></Expander>
+                  <StackPanel Spacing="12"><TextBox x:Name="OutputBox" local:Loc.Header="输出位置" ToolTipService.ToolTip="{Binding Text, ElementName=OutputBox}" /><Grid><Button local:Loc.Content="更改位置" Click="PickOutput_Click" /><HyperlinkButton local:Loc.Content="打开文件夹" HorizontalAlignment="Right" Click="OpenOutput_Click" /></Grid></StackPanel>
                 </StackPanel>
               </Grid>
               </Expander>
               <StackPanel x:Name="PreviewSection" Spacing="12" Visibility="Collapsed">
                 <Grid ColumnSpacing="16">
                   <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                  <StackPanel Spacing="8"><TextBlock Text="音轨" Style="{StaticResource SectionHeading}" /><TextBlock x:Name="PreviewLabel" Style="{StaticResource SecondaryText}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></StackPanel>
+                  <StackPanel Spacing="8"><TextBlock local:Loc.Text="音轨" Style="{StaticResource SectionHeading}" /><TextBlock x:Name="PreviewLabel" Style="{StaticResource SecondaryText}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></StackPanel>
                   <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Button x:Name="ExportTracksButton" Content="导出音轨" IsEnabled="False" Click="ExportTracks_Click" />
-                    <CheckBox x:Name="NormalizeWaveform" Content="波形归一化" IsChecked="True" Click="NormalizeWaveform_Click" ToolTipService.ToolTip="仅放大波形显示，音量与导出不变。采样峰值见音轨左侧。" />
-                    <Button Content="−" Click="ZoomOut_Click" AutomationProperties.Name="缩小波形" Width="32" />
+                    <Button x:Name="ExportTracksButton" local:Loc.Content="导出音轨" IsEnabled="False" Click="ExportTracks_Click" />
+                    <CheckBox x:Name="NormalizeWaveform" local:Loc.Content="波形归一化" IsChecked="True" Click="NormalizeWaveform_Click" local:Loc.ToolTip="仅放大波形显示，音量与导出不变。采样峰值见音轨左侧。" />
+                    <Button Content="−" Click="ZoomOut_Click" local:Loc.Name="缩小波形" Width="32" />
                     <TextBlock x:Name="ZoomLabel" Text="1×" VerticalAlignment="Center" MinWidth="32" TextAlignment="Center" />
-                    <Button Content="+" Click="ZoomIn_Click" AutomationProperties.Name="放大波形" Width="32" />
-                    <Button Content="完整音频" Click="ZoomFit_Click" />
+                    <Button Content="+" Click="ZoomIn_Click" local:Loc.Name="放大波形" Width="32" />
+                    <Button local:Loc.Content="完整音频" Click="ZoomFit_Click" />
                   </StackPanel>
                 </Grid>
                 <StackPanel Orientation="Horizontal" Spacing="12">
                   <TextBlock x:Name="ExportStatus" Visibility="Collapsed" VerticalAlignment="Center" />
-                  <Button x:Name="CancelExportButton" Content="取消导出" Visibility="Collapsed" Click="CancelExport_Click" />
+                  <Button x:Name="CancelExportButton" local:Loc.Content="取消导出" Visibility="Collapsed" Click="CancelExport_Click" />
                 </StackPanel>
                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="272" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Canvas x:Name="TimelineRuler" Grid.Column="1" Height="28" /></Grid>
-                <ScrollViewer x:Name="TracksScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="440"><StackPanel x:Name="TracksPanel" Spacing="0" /></ScrollViewer>
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="272" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Slider x:Name="TimelinePan" Grid.Column="1" Visibility="Collapsed" Minimum="0" Maximum="1" ValueChanged="TimelinePan_ValueChanged" AutomationProperties.Name="波形可见时间范围" /></Grid>
+                <StackPanel x:Name="TracksPanel" Spacing="0" />
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="272" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Slider x:Name="TimelinePan" Grid.Column="1" Visibility="Collapsed" Minimum="0" Maximum="1" ValueChanged="TimelinePan_ValueChanged" local:Loc.Name="波形可见时间范围" /></Grid>
               </StackPanel>
             </StackPanel>
             <StackPanel x:Name="ModelsPage" Visibility="Collapsed" Spacing="24" MaxWidth="1400" HorizontalAlignment="Stretch">
-              <StackPanel Spacing="12"><TextBlock Text="模型库" Style="{StaticResource TitleTextBlockStyle}" /><TextBlock Text="下载仓库模型，或导入本地 GGUF 文件。" Style="{StaticResource SecondaryText}" /></StackPanel>
-              <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="160" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="ModelSearch" PlaceholderText="搜索模型" TextChanged="ModelSearch_TextChanged" AutomationProperties.Name="搜索模型" /><ComboBox x:Name="QuantFilter" Grid.Column="1" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged" AutomationProperties.Name="量化格式"><ComboBoxItem Content="全部量化格式" /><ComboBoxItem Content="Q8_0" /><ComboBoxItem Content="FP16" /><ComboBoxItem Content="Q5_0" /><ComboBoxItem Content="Q5_1" /><ComboBoxItem Content="Q4_0" /><ComboBoxItem Content="Q4_1" /><ComboBoxItem Content="FP32" /></ComboBox><Button x:Name="ImportButton" Grid.Column="2" Content="导入模型" Click="ImportModel_Click" /></Grid>
-              <StackPanel x:Name="DownloadPanel" Spacing="12" Visibility="Collapsed"><Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock x:Name="DownloadLabel" VerticalAlignment="Center" TextWrapping="Wrap" /><Button Grid.Column="1" Content="取消" Click="CancelDownload_Click" /></Grid><ProgressBar x:Name="DownloadBar" Minimum="0" Maximum="100" /></StackPanel>
-              <StackPanel Spacing="8">
-                <Grid Padding="24,0,24,8" ColumnSpacing="20" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="64" /><ColumnDefinition Width="88" /><ColumnDefinition Width="84" /></Grid.ColumnDefinitions><TextBlock Text="模型" Style="{StaticResource SecondaryText}" /><TextBlock Grid.Column="1" Text="量化" Style="{StaticResource SecondaryText}" /><TextBlock Grid.Column="2" Text="大小" Style="{StaticResource SecondaryText}" /></Grid>
-                <ListView x:Name="CatalogList" SelectionMode="None" HorizontalContentAlignment="Stretch" AutomationProperties.Name="模型列表">
-                  <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="local:ModelRow">
-                      <Grid Padding="8,16" ColumnSpacing="20" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="64" /><ColumnDefinition Width="88" /><ColumnDefinition Width="84" /></Grid.ColumnDefinitions>
-                        <StackPanel Spacing="4"><TextBlock Text="{x:Bind Model.Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Model.DisplayName}" /><StackPanel Orientation="Horizontal" Spacing="16"><TextBlock Text="{x:Bind Model.Author}" Style="{StaticResource SecondaryText}" /><TextBlock Text="{x:Bind State, Mode=OneWay}" Style="{StaticResource SecondaryText}" /></StackPanel></StackPanel>
-                        <TextBlock Grid.Column="1" Text="{x:Bind Model.Quantization}" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{x:Bind Model.SizeLabel}" VerticalAlignment="Center" /><Button Grid.Column="3" Content="{x:Bind ButtonLabel, Mode=OneWay}" Tag="{x:Bind Model.Id}" Click="DownloadModel_Click" VerticalAlignment="Center" HorizontalAlignment="Stretch" />
-                      </Grid>
-                    </DataTemplate>
-                  </ListView.ItemTemplate>
-                </ListView>
-              </StackPanel>
+              <StackPanel Spacing="12"><TextBlock local:Loc.Text="模型库" Style="{StaticResource TitleTextBlockStyle}" /><TextBlock local:Loc.Text="下载仓库模型，或导入本地 GGUF 文件。" Style="{StaticResource SecondaryText}" /></StackPanel>
+              <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="ModelSearch" local:Loc.Placeholder="搜索名称、作者、架构或音轨" TextChanged="ModelSearch_TextChanged" local:Loc.Name="搜索模型" /><Button x:Name="ImportButton" Grid.Column="1" local:Loc.Content="导入模型" Click="ImportModel_Click" /></Grid>
+              <Grid ColumnSpacing="12" RowSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <ComboBox x:Name="QuantFilter" Grid.Row="0" Grid.Column="0" local:Loc.Header="量化类型" local:Loc.Name="量化类型" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged"><ComboBoxItem local:Loc.Content="全部量化格式" /><ComboBoxItem Content="Q8_0" Tag="Q8_0" /><ComboBoxItem Content="FP16" Tag="FP16" /><ComboBoxItem Content="Q5_0" Tag="Q5_0" /><ComboBoxItem Content="Q5_1" Tag="Q5_1" /><ComboBoxItem Content="Q4_0" Tag="Q4_0" /><ComboBoxItem Content="Q4_1" Tag="Q4_1" /><ComboBoxItem Content="FP32" Tag="FP32" /></ComboBox>
+                <ComboBox x:Name="TrackFilter" Grid.Row="0" Grid.Column="1" local:Loc.Header="音轨类型" local:Loc.Name="音轨类型" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged"><ComboBoxItem local:Loc.Content="全部音轨类型" /><ComboBoxItem local:Loc.Content="单轨" /><ComboBoxItem local:Loc.Content="多轨" /></ComboBox>
+                <ComboBox x:Name="PlatformFilter" Grid.Row="0" Grid.Column="2" local:Loc.Header="运行平台" local:Loc.Name="运行平台" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged"><ComboBoxItem local:Loc.Content="全部运行平台" /><ComboBoxItem local:Loc.Content="CPU 可用" Tag="cpu" /><ComboBoxItem local:Loc.Content="CUDA 加速" Tag="cuda" /><ComboBoxItem local:Loc.Content="必须使用 GPU" Tag="gpu-only" /></ComboBox>
+                <ComboBox x:Name="OutputFilter" Grid.Row="1" Grid.Column="0" local:Loc.Header="输出音轨" local:Loc.Name="输出音轨" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged"><ComboBoxItem local:Loc.Content="全部输出音轨" /><ComboBoxItem local:Loc.Content="人声" Tag="vocals" /><ComboBoxItem local:Loc.Content="伴奏" Tag="instrumental" /><ComboBoxItem local:Loc.Content="贝斯" Tag="bass" /><ComboBoxItem local:Loc.Content="鼓" Tag="drums" /><ComboBoxItem local:Loc.Content="其他" Tag="other" /><ComboBoxItem local:Loc.Content="吉他" Tag="guitar" /><ComboBoxItem local:Loc.Content="钢琴" Tag="piano" /></ComboBox>
+                <ComboBox x:Name="ArchitectureFilter" Grid.Row="1" Grid.Column="1" local:Loc.Header="模型架构" local:Loc.Name="模型架构" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged"><ComboBoxItem local:Loc.Content="全部架构" /><ComboBoxItem Content="BS Roformer" Tag="BS Roformer" /><ComboBoxItem Content="Mel-Band Roformer" Tag="Mel-Band Roformer" /></ComboBox>
+                <ComboBox x:Name="ExportFilter" Grid.Row="1" Grid.Column="2" local:Loc.Header="导出格式" local:Loc.Name="导出格式" SelectedIndex="0" HorizontalAlignment="Stretch" SelectionChanged="QuantFilter_SelectionChanged"><ComboBoxItem local:Loc.Content="全部导出格式" /><ComboBoxItem Content="WAV" Tag="WAV" /><ComboBoxItem Content="MP3" Tag="MP3" /></ComboBox>
+              </Grid>
+              <StackPanel x:Name="DownloadPanel" Spacing="12" Visibility="Collapsed"><Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock x:Name="DownloadLabel" VerticalAlignment="Center" TextWrapping="Wrap" /><Button Grid.Column="1" local:Loc.Content="取消" Click="CancelDownload_Click" /></Grid><ProgressBar x:Name="DownloadBar" Minimum="0" Maximum="100" /></StackPanel>
+              <TextBlock x:Name="CatalogCount" Style="{StaticResource SecondaryText}" />
+              <TextBlock x:Name="CatalogEmpty" local:Loc.Text="没有符合条件的模型，请调整筛选条件。" Visibility="Collapsed" TextWrapping="Wrap" />
+              <ListView x:Name="CatalogList" SelectionMode="None" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollMode="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled" local:Loc.Name="模型列表">
+                <ListView.ItemTemplate>
+                  <DataTemplate x:DataType="local:ModelRow">
+                    <Grid Padding="8,16" ColumnSpacing="20" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="84" /></Grid.ColumnDefinitions>
+                      <StackPanel Spacing="8">
+                        <TextBlock Text="{x:Bind Model.Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                        <TextBlock Text="{x:Bind Details}" Style="{StaticResource SecondaryText}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <Border Background="{ThemeResource ControlAltFillColorSecondaryBrush}" CornerRadius="4" Padding="8,4"><TextBlock Text="{x:Bind Model.Quantization}" FontSize="12" /></Border>
+                          <Border Background="{ThemeResource ControlAltFillColorSecondaryBrush}" CornerRadius="4" Padding="8,4"><TextBlock Text="{x:Bind TrackType, Mode=OneWay}" FontSize="12" /></Border>
+                          <Border Background="{ThemeResource ControlAltFillColorSecondaryBrush}" CornerRadius="4" Padding="8,4"><TextBlock Text="{x:Bind ExportSummary, Mode=OneWay}" FontSize="12" /></Border>
+                        </StackPanel>
+                        <TextBlock Text="{x:Bind OutputSummary, Mode=OneWay}" TextWrapping="Wrap" />
+                        <TextBlock Text="{x:Bind PlatformSummary, Mode=OneWay}" Style="{StaticResource SecondaryText}" />
+                        <TextBlock Text="{x:Bind MemorySummary, Mode=OneWay}" Style="{StaticResource SecondaryText}" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center"><Button Content="{x:Bind ButtonLabel, Mode=OneWay}" Tag="{x:Bind Model.Id}" Click="DownloadModel_Click" HorizontalAlignment="Stretch" /><TextBlock Text="{x:Bind State, Mode=OneWay}" Style="{StaticResource SecondaryText}" HorizontalAlignment="Center" /></StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
             </StackPanel>
             <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Spacing="32" MaxWidth="960" HorizontalAlignment="Left">
-              <TextBlock Text="设置" Style="{StaticResource TitleTextBlockStyle}" />
-              <StackPanel Spacing="16"><TextBlock Text="外观" Style="{StaticResource SectionHeading}" /><Grid ColumnSpacing="32" MinWidth="520"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions><TextBlock Text="应用主题" VerticalAlignment="Center" /><ComboBox x:Name="ThemeCombo" Grid.Column="1" SelectedIndex="0" SelectionChanged="Theme_SelectionChanged" HorizontalAlignment="Stretch" AutomationProperties.Name="应用主题"><ComboBoxItem Content="跟随系统" /><ComboBoxItem Content="浅色" /><ComboBoxItem Content="深色" /></ComboBox></Grid></StackPanel>
+              <TextBlock local:Loc.Text="设置" Style="{StaticResource TitleTextBlockStyle}" />
+              <StackPanel Spacing="12"><TextBlock local:Loc.Text="语言" Style="{StaticResource SectionHeading}" /><ComboBox x:Name="LanguageCombo" local:Loc.Name="应用语言" SelectedIndex="0" SelectionChanged="Language_SelectionChanged" MinWidth="220"><ComboBoxItem local:Loc.Content="跟随系统" /><ComboBoxItem Content="English" /><ComboBoxItem Content="简体中文" /></ComboBox></StackPanel>
+              <StackPanel Spacing="16"><TextBlock local:Loc.Text="外观" Style="{StaticResource SectionHeading}" /><Grid ColumnSpacing="32" MinWidth="520"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions><TextBlock local:Loc.Text="应用主题" VerticalAlignment="Center" /><ComboBox x:Name="ThemeCombo" Grid.Column="1" SelectedIndex="0" SelectionChanged="Theme_SelectionChanged" HorizontalAlignment="Stretch" local:Loc.Name="应用主题"><ComboBoxItem local:Loc.Content="跟随系统" /><ComboBoxItem local:Loc.Content="浅色" /><ComboBoxItem local:Loc.Content="深色" /></ComboBox></Grid></StackPanel>
               <StackPanel Spacing="16">
-                <TextBlock Text="推理引擎" Style="{StaticResource SectionHeading}" />
+                <TextBlock local:Loc.Text="推理引擎" Style="{StaticResource SectionHeading}" />
                 <TextBlock x:Name="RuntimeStatus" TextWrapping="Wrap" Style="{StaticResource SecondaryText}" />
-                <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="LocateEngineButton" Content="选择引擎" Click="PickEngine_Click" /></StackPanel>
-                <ProgressBar x:Name="RuntimeProgress" Minimum="0" Maximum="100" Visibility="Collapsed" /><Button x:Name="CancelRuntimeButton" Content="取消安装" Visibility="Collapsed" Click="CancelDownload_Click" />
-                <Expander Header="使用自定义引擎" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12"><TextBox x:Name="EngineBox" Header="可执行文件位置" PlaceholderText="留空自动查找" /><Button Content="选择文件" Click="PickEngine_Click" /></StackPanel></Expander>
+                <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="LocateEngineButton" local:Loc.Content="选择引擎" Click="PickEngine_Click" /></StackPanel>
+                <ProgressBar x:Name="RuntimeProgress" Minimum="0" Maximum="100" Visibility="Collapsed" /><Button x:Name="CancelRuntimeButton" local:Loc.Content="取消安装" Visibility="Collapsed" Click="CancelDownload_Click" />
+                <Expander local:Loc.Header="使用自定义引擎" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="12"><TextBox x:Name="EngineBox" local:Loc.Header="可执行文件位置" local:Loc.Placeholder="留空自动查找" /><Button local:Loc.Content="选择文件" Click="PickEngine_Click" /></StackPanel></Expander>
               </StackPanel>
-              <StackPanel Spacing="16"><TextBlock Text="存储" Style="{StaticResource SectionHeading}" /><TextBlock x:Name="DataPathLabel" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" IsTextSelectionEnabled="True" /></StackPanel>
-              <Expander Header="命令行" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="16"><TextBlock Text="使用 --json 获取逐行 JSON 进度和结果。" TextWrapping="Wrap" /><TextBox IsReadOnly="True" FontFamily="Cascadia Mono,Consolas" FontSize="14" TextWrapping="Wrap" Text="stemora separate --input song.mp3 --model model.gguf --output ./stems --json" /></StackPanel></Expander>
-              <StackPanel Orientation="Horizontal" Spacing="24"><Button Content="保存设置" Style="{StaticResource AccentButtonStyle}" Click="SaveSettings_Click" /><TextBlock Text="Stemora 0.2.0" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" /></StackPanel>
+              <StackPanel Spacing="16"><TextBlock local:Loc.Text="存储" Style="{StaticResource SectionHeading}" /><TextBlock x:Name="DataPathLabel" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" IsTextSelectionEnabled="True" /></StackPanel>
+              <Expander local:Loc.Header="命令行" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"><StackPanel Spacing="16"><TextBlock local:Loc.Text="使用 --json 获取逐行 JSON 进度和结果。" TextWrapping="Wrap" /><TextBox IsReadOnly="True" FontFamily="Cascadia Mono,Consolas" FontSize="14" TextWrapping="Wrap" Text="stemora separate --input song.mp3 --model model.gguf --output ./stems --json" /></StackPanel></Expander>
+              <StackPanel Orientation="Horizontal" Spacing="24"><Button local:Loc.Content="保存设置" Style="{StaticResource AccentButtonStyle}" Click="SaveSettings_Click" /><TextBlock Text="Stemora 0.3.0" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" /></StackPanel>
             </StackPanel>
           </Grid>
         </ScrollViewer>
         <StackPanel x:Name="TimelineTransport" Grid.Row="2" Spacing="8" Padding="0,12,0,12" Visibility="Collapsed">
                 <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                  <Button x:Name="PlaybackButton" Width="40" Height="36" Click="Playback_Click" IsEnabled="False" AutomationProperties.Name="播放"><FontIcon x:Name="PlaybackGlyph" Glyph="&#xE768;" FontSize="16" /></Button>
-                  <Button Grid.Column="1" Width="36" Height="36" Click="ReturnToStart_Click" AutomationProperties.Name="回到开始"><FontIcon Glyph="&#xE892;" FontSize="16" /></Button>
+                  <Button x:Name="PlaybackButton" Width="40" Height="36" Click="Playback_Click" IsEnabled="False" local:Loc.Name="播放"><FontIcon x:Name="PlaybackGlyph" Glyph="&#xE768;" FontSize="16" /></Button>
+                  <Button Grid.Column="1" Width="36" Height="36" Click="ReturnToStart_Click" local:Loc.Name="回到开始"><FontIcon Glyph="&#xE892;" FontSize="16" /></Button>
                   <TextBlock x:Name="PositionText" Grid.Column="2" Text="00:00.0 / 00:00.0" VerticalAlignment="Center" FontFamily="Cascadia Mono,Consolas" />
                   <TextBlock x:Name="TimelineDetails" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource SecondaryText}" />
                 </Grid>
-                <Slider x:Name="PositionSlider" Minimum="0" Maximum="1" ValueChanged="Position_ValueChanged" AutomationProperties.Name="共用播放进度" />
+                <Slider x:Name="PositionSlider" Minimum="0" Maximum="1" ValueChanged="Position_ValueChanged" local:Loc.Name="共用播放进度" />
         </StackPanel>
         <Grid x:Name="RunFooter" Grid.Row="3" Padding="0,16,0,20" ColumnSpacing="12">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <StackPanel VerticalAlignment="Center" Spacing="8" Margin="0,0,12,0"><TextBlock x:Name="RunStatus" Text="添加音频以开始" TextTrimming="CharacterEllipsis" /><ProgressBar x:Name="RunProgress" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" /></StackPanel>
-          <Button Grid.Column="1" Width="36" Height="36" VerticalAlignment="Center" AutomationProperties.Name="运行日志" ToolTipService.ToolTip="运行日志"><FontIcon Glyph="&#xE9D9;" FontSize="16" /><Button.Flyout><Flyout Placement="Top"><TextBox x:Name="LogText" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" Width="640" MaxHeight="320" FontFamily="Cascadia Mono,Consolas" FontSize="14" AutomationProperties.Name="运行日志内容" /></Flyout></Button.Flyout></Button>
+          <StackPanel VerticalAlignment="Center" Spacing="8" Margin="0,0,12,0"><TextBlock x:Name="RunStatus" local:Loc.Text="添加音频以开始" TextTrimming="CharacterEllipsis" /><ProgressBar x:Name="RunProgress" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" /></StackPanel>
+          <Button Grid.Column="1" Width="36" Height="36" VerticalAlignment="Center" local:Loc.Name="运行日志" local:Loc.ToolTip="运行日志"><FontIcon Glyph="&#xE9D9;" FontSize="16" /><Button.Flyout><Flyout Placement="Top"><TextBox x:Name="LogText" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" Width="640" MaxHeight="320" FontFamily="Cascadia Mono,Consolas" FontSize="14" local:Loc.Name="运行日志内容" /></Flyout></Button.Flyout></Button>
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button x:Name="CancelButton" Content="取消" Visibility="Collapsed" Click="Cancel_Click" MinWidth="88" Height="36" />
-            <Button x:Name="StartButton" Content="开始分离" Click="Start_Click" Style="{StaticResource AccentButtonStyle}" MinWidth="120" Height="36" IsEnabled="False" />
+            <Button x:Name="CancelButton" local:Loc.Content="取消" Visibility="Collapsed" Click="Cancel_Click" MinWidth="88" Height="36" />
+            <Button x:Name="StartButton" local:Loc.Content="开始分离" Click="Start_Click" Style="{StaticResource AccentButtonStyle}" MinWidth="120" Height="36" IsEnabled="False" />
           </StackPanel>
         </Grid>
       </Grid>

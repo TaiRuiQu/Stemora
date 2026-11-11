@@ -35,6 +35,8 @@
 
 `Publish.ps1` 生成自包含的 `artifacts/Stemora`，包含 .NET / Windows App SDK 运行时和原生 Infra。`-SkipNativeBuild` 复用已构建的本地后端；发布时会重新生成原生运行时文件，避免混入旧 DLL。`-IncludeModel` 仅用于本地测试，正式发布包不附带模型。
 
+顶层的 `Stemora.App.exe` 是静态链接的原生启动器，实际 WinUI 应用及其运行依赖位于 `app`。仅保留英文和简体中文语言资源；`native`、`cli` 和便携数据 `data` 仍位于顶层。启动器保留参数、工作目录和退出码。可用 `-NativeDirectory artifacts/native-cpu -SkipNativeBuild` 验证 CPU 测试包，正式发布使用默认的 CUDA / CPU 后端。
+
 `Package.ps1` 生成 `artifacts/Stemora-windows-x64.zip`，会排除设置、任务、运行时缓存、锁文件和 PDB。
 
 ## 测试

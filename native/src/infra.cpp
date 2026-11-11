@@ -36,7 +36,7 @@ stemora::RunOptions parse(const stemora_options *options) {
 }
 } // namespace
 uint32_t stemora_abi_version() { return 1; }
-const char *stemora_version() { return "Stemora Infra 0.2.0"; }
+const char *stemora_version() { return "Stemora Infra 0.3.0"; }
 const char *stemora_last_error() { return error.c_str(); }
 size_t stemora_probe(const char *model, const stemora_options *options, char *json, size_t capacity) {
     try {

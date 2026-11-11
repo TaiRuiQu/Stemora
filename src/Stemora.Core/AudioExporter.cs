@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using NAudio.Wave;
 
 namespace Stemora.Core;
@@ -12,8 +13,8 @@ public static class AudioExporter
     {
         ArgumentNullException.ThrowIfNull(tracks);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
-        if (tracks.Count == 0) throw new ArgumentException("请至少选择一条音轨。", nameof(tracks));
-        if (!Enum.IsDefined(format) || !Enum.IsDefined(encoding)) throw new ArgumentException("导出格式无效。");
+        if (tracks.Count == 0) throw new ArgumentException(Tr("请至少选择一条音轨。"), nameof(tracks));
+        if (!Enum.IsDefined(format) || !Enum.IsDefined(encoding)) throw new ArgumentException(Tr("导出格式无效。"));
         var snapshot = tracks.ToArray();
         GgufInspector.ValidateStems(snapshot.Select(track => track.Id).ToArray(), snapshot.Length);
         var destination = Path.GetFullPath(outputDirectory);
@@ -25,10 +26,10 @@ public static class AudioExporter
     {
         ct.ThrowIfCancellationRequested();
         if (Directory.Exists(destination) || File.Exists(destination))
-            throw new IOException("导出文件夹已存在，请选择新的文件夹以保留原有文件。");
+            throw new IOException(Tr("导出文件夹已存在，请选择新的文件夹以保留原有文件。"));
         foreach (var track in tracks)
-            if (!File.Exists(track.Path)) throw new FileNotFoundException($"找不到音轨：{track.Label}", track.Path);
-        var parent = Path.GetDirectoryName(destination) ?? throw new ArgumentException("请选择有效的导出位置。");
+            if (!File.Exists(track.Path)) throw new FileNotFoundException(Tr("找不到音轨：{0}", track.Label), track.Path);
+        var parent = Path.GetDirectoryName(destination) ?? throw new ArgumentException(Tr("请选择有效的导出位置。"));
         Directory.CreateDirectory(parent);
         var stage = Path.Combine(parent, ".stemora-export-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(stage);
@@ -38,7 +39,7 @@ public static class AudioExporter
             {
                 ct.ThrowIfCancellationRequested();
                 var track = tracks[i];
-                progress?.Report(new("export", (double)i / tracks.Length, $"正在导出 {track.Label} ({i + 1}/{tracks.Length})"));
+                progress?.Report(new("export", (double)i / tracks.Length, Tr("正在导出 {0} ({1}/{2})", track.Label, i + 1, tracks.Length)));
                 var output = Path.Combine(stage, track.Id + (format == AudioExportFormat.Mp3 ? ".mp3" : ".wav"));
                 if (format == AudioExportFormat.Wav) AudioPipeline.Export(track.Path, output, encoding, ct);
                 else ExportMp3(track.Path, output, ct);
@@ -70,7 +71,7 @@ public static class AudioExporter
             var read = source.Read(buffer, offset, count);
             for (var i = offset; i < offset + read; i++)
             {
-                if (!float.IsFinite(buffer[i])) throw new InvalidDataException("音轨包含非有限数值，导出已停止。");
+                if (!float.IsFinite(buffer[i])) throw new InvalidDataException(Tr("音轨包含非有限数值，导出已停止。"));
                 buffer[i] = Math.Clamp(buffer[i], -1f, 1f);
             }
             return read;

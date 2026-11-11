@@ -24,8 +24,8 @@ python -m pip install clang-format==18.1.8
 3. 创建并推送对应标签，例如：
 
 ```powershell
-git tag -a v0.2.0 -m 'Stemora 0.2.0'
-git push origin v0.2.0
+git tag -a v0.3.0 -m 'Stemora 0.3.0'
+git push origin v0.3.0
 ```
 
 `Release` 工作流会重新运行 lint / 构建 / 测试，校验标签和源码版本，然后构建 CUDA / CPU 运行时和自包含 WinUI / CLI，打包并发布 GitHub Release。附件为 `Stemora-v版本-windows-x64.zip` 和 `SHA256SUMS.txt`，更新日志由 GitHub 自动生成。带 `-` 的标签（如 `v0.3.0-rc.1`）发布为 prerelease。

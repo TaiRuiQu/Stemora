@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -14,11 +15,11 @@ public sealed partial class SeparationService(AppPaths paths)
         ValidateOptions(options);
         var input = Path.GetFullPath(options.InputPath);
         var model = Path.GetFullPath(options.ModelPath);
-        if (!File.Exists(input)) throw new FileNotFoundException("输入音频不存在。", input);
-        if (!File.Exists(model)) throw new FileNotFoundException("模型文件不存在。", model);
+        if (!File.Exists(input)) throw new FileNotFoundException(Tr("输入音频不存在。"), input);
+        if (!File.Exists(model)) throw new FileNotFoundException(Tr("模型文件不存在。"), model);
         ModelRepository.ValidateGguf(model);
         var engine = new EngineManager(paths).Find(options.EnginePath)
-            ?? throw new FileNotFoundException("尚未安装推理引擎。请在「设置」安装，或运行 stemora runtime install。");
+            ?? throw new FileNotFoundException(Tr("尚未安装推理引擎。请在「设置」安装，或运行 stemora runtime install。"));
         var native = EngineManager.IsInfrastructure(engine);
         ModelDescriptor? description = native ? await ModelRepository.InspectAsync(model, ct) : null;
         if (description != null)
@@ -45,7 +46,7 @@ public sealed partial class SeparationService(AppPaths paths)
         try
         {
             Directory.CreateDirectory(stage);
-            progress?.Report(new("prepare", 0, "正在解码音频"));
+            progress?.Report(new("prepare", 0, Tr("正在解码音频")));
             var wav = Path.Combine(job, "input.wav");
             var duration = await Task.Run(() => AudioPipeline.Prepare(input, wav, progress, ct), ct);
             // Upstream uses narrow fopen on Windows. ASCII relative names also work when the user profile,
@@ -58,8 +59,8 @@ public sealed partial class SeparationService(AppPaths paths)
             var raw = nativeOutputs?.Stems ?? Directory.GetFiles(job, "output*.wav").Order(StringComparer.Ordinal)
                 .Select((file, i) => new RawStem(i == 0 ? "primary" : $"stem_{i}", file)).ToArray();
             var stems = raw.Select(s => s.Path).ToArray();
-            if (stems.Length == 0) throw new InvalidDataException("引擎退出后没有生成音轨，请检查引擎版本和日志。");
-            progress?.Report(new("export", 0.92, "正在导出分离音轨"));
+            if (stems.Length == 0) throw new InvalidDataException(Tr("引擎退出后没有生成音轨，请检查引擎版本和日志。"));
+            progress?.Report(new("export", 0.92, Tr("正在导出分离音轨")));
             var names = new List<string>();
             for (var i = 0; i < stems.Length; i++)
             {
@@ -71,7 +72,7 @@ public sealed partial class SeparationService(AppPaths paths)
             string? residualName = null;
             if (options.ExportResidual && stems.Length == 1)
             {
-                progress?.Report(new("export", 0.96, "正在计算残差伴奏"));
+                progress?.Report(new("export", 0.96, Tr("正在计算残差伴奏")));
                 residualName = "residual.wav";
                 await Task.Run(() => AudioPipeline.ExportResidual(wav, stems[0], Path.Combine(stage, residualName), options.Encoding, ct), ct);
             }
@@ -84,7 +85,7 @@ public sealed partial class SeparationService(AppPaths paths)
             await File.WriteAllTextAsync(Path.Combine(stage, "result.json"), JsonSerializer.Serialize(result, JsonDefaults.Options), ct);
             ct.ThrowIfCancellationRequested();
             Directory.Move(stage, final);
-            progress?.Report(new("completed", 1, "分离完成"));
+            progress?.Report(new("completed", 1, Tr("分离完成")));
             return result;
         }
         finally
@@ -99,11 +100,11 @@ public sealed partial class SeparationService(AppPaths paths)
         ArgumentException.ThrowIfNullOrWhiteSpace(options.InputPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ModelPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.OutputDirectory);
-        if (options.Overlap is < 1 or > 32) throw new ArgumentException("重叠次数需要在 1–32 之间。");
-        if (options.ChunkSize is < 8192 or > 3528000) throw new ArgumentException("分块大小需要在 8192–3528000 采样点之间。");
+        if (options.Overlap is < 1 or > 32) throw new ArgumentException(Tr("重叠次数需要在 1–32 之间。"));
+        if (options.ChunkSize is < 8192 or > 3528000) throw new ArgumentException(Tr("分块大小需要在 8192–3528000 采样点之间。"));
         if (options.Overlap.HasValue && options.ChunkSize.HasValue && options.Overlap.Value >= options.ChunkSize.Value)
-            throw new ArgumentException("重叠次数必须小于分块采样数。");
-        if (!Enum.IsDefined(options.Device) || !Enum.IsDefined(options.Encoding)) throw new ArgumentException("设备或导出格式无效。");
+            throw new ArgumentException(Tr("重叠次数必须小于分块采样数。"));
+        if (!Enum.IsDefined(options.Device) || !Enum.IsDefined(options.Encoding)) throw new ArgumentException(Tr("设备或导出格式无效。"));
         if (options.StemNames != null) GgufInspector.ValidateStems(options.StemNames, options.StemNames.Count);
     }
 
@@ -117,11 +118,11 @@ public sealed partial class SeparationService(AppPaths paths)
             var id = item.GetProperty("id").GetString() ?? "";
             var filename = item.GetProperty("file").GetString() ?? "";
             if (Path.GetFileName(filename) != filename || !filename.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("原生后端返回了无效的输出路径。");
+                throw new InvalidDataException(Tr("原生后端返回了无效的输出路径。"));
             return new RawStem(id, Path.Combine(job, filename));
         }).ToArray();
         GgufInspector.ValidateStems(stems.Select(s => s.Id).ToArray(), expected.Stems.Count);
-        if (!stems.Select(s => s.Id).SequenceEqual(expected.Stems.Select(s => s.Id))) throw new InvalidDataException("后端返回的音轨顺序与模型描述不符。");
+        if (!stems.Select(s => s.Id).SequenceEqual(expected.Stems.Select(s => s.Id))) throw new InvalidDataException(Tr("后端返回的音轨顺序与模型描述不符。"));
         var model = document.RootElement.GetProperty("model");
         var backend = model.TryGetProperty("backend", out var value) ? value.GetString() : null;
         return new(stems, backend);
@@ -146,7 +147,7 @@ public sealed partial class SeparationService(AppPaths paths)
                          "--profile", description.Family, "--stems", string.Join(',', description.Stems.Select(s => s.Id)) }) start.ArgumentList.Add(value);
         }
         else foreach (var value in new[] { "model.gguf", "input.wav", "output.wav" }) start.ArgumentList.Add(value);
-        if (description == null && options.Device == ComputeDevice.Cuda) throw new NotSupportedException("CUDA 模式需要 Stemora Infra 后端。");
+        if (description == null && options.Device == ComputeDevice.Cuda) throw new NotSupportedException(Tr("CUDA 模式需要 Stemora Infra 后端。"));
         if (options.ChunkSize is { } chunk) { start.ArgumentList.Add("--chunk-size"); start.ArgumentList.Add(chunk.ToString(CultureInfo.InvariantCulture)); }
         if (options.Overlap is { } overlap) { start.ArgumentList.Add("--overlap"); start.ArgumentList.Add(overlap.ToString(CultureInfo.InvariantCulture)); }
         // Infra selects its device per request. Only the explicit legacy protocol uses this override.
@@ -172,7 +173,7 @@ public sealed partial class SeparationService(AppPaths paths)
                         if (type == "progress" && root.TryGetProperty("fraction", out var percent) && percent.TryGetDouble(out var nativeFraction))
                         {
                             fraction = Math.Max(fraction, Math.Clamp(nativeFraction, 0, 1));
-                            progress?.Report(new("inference", 0.1 + fraction * 0.8, $"推理中 ({fraction:P0})"));
+                            progress?.Report(new("inference", 0.1 + fraction * 0.8, Tr("推理中 ({0:P0})", fraction)));
                             return;
                         }
                         if (type is "model" or "completed") return;
@@ -183,7 +184,7 @@ public sealed partial class SeparationService(AppPaths paths)
                 if (NativeOutputParser.ParseFraction(line) is { } value)
                 {
                     fraction = Math.Max(fraction, value);
-                    progress?.Report(new("inference", 0.1 + fraction * 0.8, $"推理中 ({fraction:P0})"));
+                    progress?.Report(new("inference", 0.1 + fraction * 0.8, Tr("推理中 ({0:P0})", fraction)));
                 }
                 else
                 {
@@ -193,8 +194,8 @@ public sealed partial class SeparationService(AppPaths paths)
                 }
             }
         }
-        progress?.Report(new("inference", null, "正在加载模型与计算后端"));
-        if (!process.Start()) throw new IOException("无法启动推理引擎。");
+        progress?.Report(new("inference", null, Tr("正在加载模型与计算后端")));
+        if (!process.Start()) throw new IOException(Tr("无法启动推理引擎。"));
         using var cancellation = ct.Register(() =>
         {
             try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { }
@@ -205,7 +206,7 @@ public sealed partial class SeparationService(AppPaths paths)
         await Task.WhenAll(stdout, stderr);
         ct.ThrowIfCancellationRequested();
         if (process.ExitCode != 0)
-            throw new InvalidOperationException($"推理引擎失败（退出码 {process.ExitCode}）。\n{string.Join('\n', tail)}");
+            throw new InvalidOperationException(Tr("推理引擎失败（退出码 {0}）。\n{1}", process.ExitCode, string.Join('\n', tail)));
     }
 
     private static async Task ReadOutputAsync(StreamReader reader, Action<string> onLine)

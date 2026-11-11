@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -89,7 +90,7 @@ public sealed class AudioMixerSession : IDisposable
     public AudioMixerSession(IEnumerable<MixerTrack> tracks)
     {
         _tracks = tracks.ToArray();
-        if (_tracks.Length == 0) throw new ArgumentException("需要至少一条音轨。");
+        if (_tracks.Length == 0) throw new ArgumentException(Tr("需要至少一条音轨。"));
         _states = _tracks.Select(t => (t.Muted, false, 1f)).ToArray();
         try { Rebuild(0); } catch { Dispose(); throw; }
     }
@@ -109,7 +110,7 @@ public sealed class AudioMixerSession : IDisposable
             reader.CurrentTime = TimeSpan.FromSeconds(Math.Min(seconds, reader.TotalTime.TotalSeconds));
             ISampleProvider source = reader;
             if (source.WaveFormat.Channels == 1) source = new MonoToStereoSampleProvider(source);
-            if (source.WaveFormat.Channels != 2) throw new NotSupportedException("试听支持单声道或双声道音频。");
+            if (source.WaveFormat.Channels != 2) throw new NotSupportedException(Tr("试听支持单声道或双声道音频。"));
             if (source.WaveFormat.SampleRate != 44100) source = new WdlResamplingSampleProvider(source, 44100);
             channels.Add(new(track, source));
         }

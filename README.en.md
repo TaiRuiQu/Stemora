@@ -10,7 +10,7 @@
 
 Stemora is a free, local audio separation tool for remixes, covers, sampling, mixing practice, and video production. It does not need a Python environment, never uploads your audio, and has no server component.
 
-**[Download for Windows](https://github.com/TaiRuiQu/Stemora/releases/latest)** · [Quick start](#quick-start) · [FAQ](#faq)
+**[Download for Windows](https://github.com/TaiRuiQu/Stemora/releases/latest)** / [Quick start](#quick-start) / [FAQ](#faq)
 
 > The app interface is currently in Simplified Chinese. The key labels below include the Chinese text you will see in the app.
 
@@ -25,6 +25,12 @@ Stemora is a free, local audio separation tool for remixes, covers, sampling, mi
 - **Model library**: browse and download models in the app with resume and SHA-256 verification, or import a local GGUF model.
 - **CUDA / CPU**: NVIDIA GPUs are used automatically when available; CPU fallback works without one.
 - **Batch processing**: add several files at once and process them one by one.
+
+The app supports English and Simplified Chinese. Choose a language in Settings, or follow the Windows display language; changes apply immediately and are saved.
+
+The model library supports combined filters for quantization, output tracks, single-stem / multi-stem, platform, architecture and export format. Each entry shows outputs, CPU / CUDA support and recommended RAM/VRAM. Measurements and estimates are documented in the [local resource report](docs/MODEL-MEMORY.md).
+
+The top-level `Stemora.App.exe` launches the app. Runtime dependencies live in `app`, with English and Simplified Chinese resources only. Keep the `app`, `native` and `cli` folders with the launcher.
 
 ## Requirements
 
@@ -56,7 +62,7 @@ Stemora does not bundle models. Open **Model library** (**模型库**) from the 
 
 Start with **BS Roformer SW (Q8_0, about 180 MB)**, which produces six tracks. Once downloaded, the model works offline.
 
-![Model library](docs/images/model-library.png)
+![Model library](docs/images/model-library.en.png)
 
 ### 2. Add audio
 
@@ -98,7 +104,7 @@ The model library contains several model families and quantization levels. If yo
 | Lower disk and memory use | **Q4_0** / **Q5_0** versions of the same model |
 | Highest quality | **Q8_0**, **FP16**, or **FP32** |
 
-About quantization: `Q8_0` is a good balance between size and quality for most users. `Q4_0` is the smallest and fastest but may lose more detail. `FP16` / `FP32` are the largest and need more memory and VRAM.
+About quantization: `Q8_0` balances file size and quality. `Q4_0` uses smaller files but may lose more detail; `FP16` / `FP32` use larger files. Speed and peak memory also depend on kernels and chunk size. See the [local resource report](docs/MODEL-MEMORY.md).
 
 Models in the library come from repositories such as [BSRoformer-GGUF](https://huggingface.co/chenmozhijin/BSRoformer-GGUF) and [BS-RoFormer-SW-6stem](https://huggingface.co/FractalSurfer/BS-RoFormer-SW-6stem); see each model card for the author and license.
 

@@ -5,5 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Deterministic>true</Deterministic>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SatelliteResourceLanguages>en;en-US;zh;zh-CN;zh-Hans</SatelliteResourceLanguages>
   </PropertyGroup>
 </Project>

@@ -117,6 +117,47 @@ try
     Check(NativeOutputParser.ParseFraction("[==>] 42 %") == 0.42, "native carriage-return progress parser");
     Check(NativeOutputParser.ParseFraction("tensor size: 256") == null && NativeOutputParser.ParseFraction("144 %") == null, "ignore unrelated numbers and invalid progress");
     Check(ModelRepository.Catalog.Count == 22 && ModelRepository.Catalog.All(m => m.Sha256.Length == 64 && m.Revision.Length == 40), "pinned catalog and SHA-256 coverage");
+    var catalog = ModelRepository.Catalog;
+    Check(catalog.All(m => m.Stems is { Length: > 0 } && m.Hardware is { CpuSupported: true, CudaSupported: true }
+        && m.ExportFormats?.SequenceEqual(new[] { "WAV", "MP3" }) == true), "every model documents outputs, platforms and export formats");
+    Check(catalog.Where(m => new ModelFilters(Quantization: "Q4_0", Stem: "instrumental", StemCount: -1,
+        Platform: "cpu", Architecture: "Mel-Band Roformer", ExportFormat: "MP3").Matches(m))
+        .Select(m => m.Id).SequenceEqual(new[] { "becruily-q4_0" }), "combined catalog filters find the two-stem instrumental model");
+    Check(!catalog.Any(m => new ModelFilters(Stem: "piano", StemCount: 1).Matches(m))
+        && !catalog.Any(m => new ModelFilters(Platform: "gpu-only").Matches(m)), "catalog filters preserve empty results without claiming GPU-only requirements");
+    Check(catalog.All(m => m.Hardware is
+    {
+        RecommendedRamGb: > 0, RecommendedVramGb: > 0,
+        Memory: { CpuRamMiB: > 0, CudaRamMiB: > 0, VramMiB: > 0, ChunkFrames: > 0, Overlap: > 0 }
+    }),
+        "every model has measured or calibrated CPU/CUDA memory and capacity recommendations");
+    Check(catalog.Where(m => m.Quantization.StartsWith("FP", StringComparison.Ordinal))
+        .All(m => m.Hardware?.Memory?.Basis == "measured"), "floating-point models are measured directly");
+    Check(catalog.Where(m => m.Hardware?.Memory?.Basis == "estimated").All(m =>
+        m.Quantization.StartsWith('Q') && catalog.Any(reference => reference.Id == m.Hardware!.Memory!.ReferenceModelId
+            && reference.Name == m.Name && reference.Author == m.Author && reference.Hardware?.Memory?.Basis == "measured")),
+        "estimated quantizations use a measured reference from the same model group");
+    Check(catalog.All(m => m.Hardware!.RecommendedRamGb * 1024 >= m.Hardware.Memory!.CpuRamMiB
+        && m.Hardware.RecommendedVramGb * 1024 >= m.Hardware.Memory.VramMiB), "capacity tags cover modeled process peaks");
+    Check(Strings.ResolveLanguage(null, new System.Globalization.CultureInfo("zh-TW")) == "zh-CN"
+        && Strings.ResolveLanguage(null, new System.Globalization.CultureInfo("fr-FR")) == "en-US", "system language resolves to a supported locale");
+    var previousLanguage = Strings.Language;
+    Strings.SetLanguage("en-US");
+    var localizedJob = new Stemora.App.AudioJob(input);
+    localizedJob.SetStatus("已完成 ({0:F1} 秒)", 1.25);
+    Check(localizedJob.Status == "Completed (1.2 s)" && Strings.StemLabel("vocals") == "Vocals", "English statuses retain format arguments and translate track IDs");
+    Check(catalog.Count(m => new ModelFilters("vocals Q4_0", StemCount: 1).Matches(m)) == 2, "search combines translated tracks and quantization terms");
+    Strings.SetLanguage("zh-CN");
+    Check(localizedJob.Status == "已完成 (1.2 秒)" && Strings.StemLabel("vocals") == "人声"
+        && Strings.StemLabel("custom_track", "Custom track") == "Custom track", "language switch refreshes statuses and preserves custom labels");
+    Strings.SetLanguage(previousLanguage);
+    using (var resources = typeof(Strings).Assembly.GetManifestResourceStream("Stemora.Core.Data.en-US.json")!)
+    {
+        var messages = JsonSerializer.Deserialize<Dictionary<string, string>>(resources)!;
+        Check(messages.Count >= 240 && messages.All(pair => !pair.Value.Any(c => c is >= '\u4e00' and <= '\u9fff')
+            && System.Text.CompositeFormat.Parse(pair.Key).MinimumArgumentCount == System.Text.CompositeFormat.Parse(pair.Value).MinimumArgumentCount),
+            "English resources contain translations with matching format arguments");
+    }
     // A loopback HTTP fixture exercises the real streaming/resume/hash path without downloading model files.
     var payload = Enumerable.Range(0, 65536).Select(i => (byte)(i % 251)).ToArray();
     var downloadPath = Path.Combine(root, "download.gguf");
@@ -146,7 +187,7 @@ try
         Check(!await Downloads.IsValidAsync(downloadPath, new string('0', 64), payload.Length), "reject checksum mismatch");
     }
     finally { listener.Stop(); }
-    var settings = new AppSettings { ModelPath = model, Overlap = 4, Device = ComputeDevice.Cpu };
+    var settings = new AppSettings { ModelPath = model, Overlap = 4, Device = ComputeDevice.Cpu, Language = "en-US" };
     await paths.SaveSettingsAsync(settings);
     Check(paths.LoadSettings() == settings, "settings round trip");
     var portableSettings = settings with { ModelPath = Path.Combine(paths.Models, "test.gguf"), EnginePath = Path.Combine(paths.Runtime, "engine.exe") };

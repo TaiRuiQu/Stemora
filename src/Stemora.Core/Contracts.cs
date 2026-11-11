@@ -27,11 +27,18 @@ public sealed record DownloadProgress(long Received, long? Total, string Message
 }
 public sealed record ModelInfo(string Id, string Name, string Author, string Architecture,
     string Quantization, string RepositoryPath, long Size, string Sha256, string Revision,
-    string Repository = ModelRepository.Repository, string? Profile = null, string[]? Stems = null)
+    string Repository = ModelRepository.Repository, string? Profile = null, string[]? Stems = null,
+    ModelHardware? Hardware = null, string[]? ExportFormats = null)
 {
     public string DisplayName => $"{Name} ({Quantization})";
     public string SizeLabel => $"{Size / 1048576d:F1} MB";
 }
+public sealed record ModelHardware(bool CpuSupported, bool CudaSupported, string RecommendedDevice,
+    double? RecommendedVramGb = null, string? Source = null, double? RecommendedRamGb = null,
+    ModelMemoryProfile? Memory = null);
+public sealed record ModelMemoryProfile(string Basis, string ReferenceModelId,
+    double CpuRamMiB, double CudaRamMiB, double VramMiB,
+    int ChunkFrames, int Overlap, double AudioSeconds, string Benchmark);
 public sealed record AppSettings
 {
     public string? ModelPath { get; init; }
@@ -43,6 +50,8 @@ public sealed record AppSettings
     public int? Overlap { get; init; }
     public bool ExportResidual { get; init; } = true;
     public string Theme { get; init; } = "Default";
+    // null follows the Windows display language; explicit choices survive portable moves.
+    public string? Language { get; init; }
 }
 public static class JsonDefaults
 {

@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using System.Reflection;
 using System.Text.Json;
 using System.Collections.Concurrent;
@@ -48,8 +49,8 @@ public sealed class ModelRepository(AppPaths paths)
     {
         using var reader = new BinaryReader(File.OpenRead(path));
         if (reader.BaseStream.Length < 24 || reader.ReadUInt32() != 0x46554747)
-            throw new InvalidDataException("请选择有效的 GGUF 文件（Git LFS 指针不是模型文件）。");
+            throw new InvalidDataException(Tr("请选择有效的 GGUF 文件（Git LFS 指针不是模型文件）。"));
         var version = reader.ReadUInt32();
-        if (version is < 2 or > 3) throw new InvalidDataException($"不支持 GGUF v{version}，需要 v2 或 v3。");
+        if (version is < 2 or > 3) throw new InvalidDataException(Tr("不支持 GGUF v{0}，需要 v2 或 v3。", version));
     }
 }

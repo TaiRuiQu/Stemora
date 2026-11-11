@@ -35,6 +35,8 @@ For developers who want to build, test, or modify Stemora from source. If you ju
 
 `Publish.ps1` produces a self-contained `artifacts/Stemora` with the .NET / Windows App SDK runtime and native Infra. `-SkipNativeBuild` reuses the local backend; publishing regenerates the native runtime files so stale DLLs are not included. `-IncludeModel` is for local testing only; official releases do not bundle models.
 
+The top-level `Stemora.App.exe` is a statically linked native launcher. The WinUI app and its dependencies live in `app`, with English and Simplified Chinese resources only. `native`, `cli` and portable `data` remain at the top level. The launcher preserves arguments, working directory and exit status. Use `-NativeDirectory artifacts/native-cpu -SkipNativeBuild` for CPU packaging checks; official releases use the default CUDA / CPU backend.
+
 `Package.ps1` creates `artifacts/Stemora-windows-x64.zip`, excluding settings, jobs, runtime caches, lock files, and PDBs.
 
 ## Tests

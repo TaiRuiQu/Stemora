@@ -1,3 +1,4 @@
+using static Stemora.Core.Strings;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -15,7 +16,7 @@ public sealed class WaveformView : Grid
 {
     private readonly Canvas _canvas = new() { IsHitTestVisible = false };
     private readonly Line _playhead = new() { StrokeThickness = 1.5, IsHitTestVisible = false };
-    private readonly TextBlock _empty = new() { Text = "正在分析波形…", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _empty = new() { Text = Tr("正在分析波形…"), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
     private bool _dragging;
     public WaveformData? Data { get; set; }
     public double ViewStart { get; set; }
@@ -37,7 +38,8 @@ public sealed class WaveformView : Grid
         PointerReleased += (_, e) => { _dragging = false; ReleasePointerCapture(e.Pointer); };
         PointerCanceled += (_, _) => _dragging = false;
         PointerWheelChanged += (_, e) => { Zoom?.Invoke(e.GetCurrentPoint(this).Properties.MouseWheelDelta > 0 ? 2 : 0.5); e.Handled = true; };
-        AutomationProperties.SetName(this, "音轨波形，点击或拖动定位，滚轮缩放");
+        Loc.SetName(this, "音轨波形，点击或拖动定位，滚轮缩放");
+        Loc.SetText(_empty, "正在分析波形…");
     }
     private void RequestSeek(PointerRoutedEventArgs e)
     {

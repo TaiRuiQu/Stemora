@@ -1,11 +1,12 @@
+using static Stemora.Core.Strings;
 using System.IO;
 
 namespace Stemora.Core;
 
 public sealed class EngineManager(AppPaths paths)
 {
-    public const string Version = "0.2.0";
-    public const string InfraVersion = "0.2.0";
+    public const string Version = "0.3.0";
+    public const string InfraVersion = "0.3.0";
     public static bool IsInfrastructure(string path) => Path.GetFileName(path).Equals("stemora-infra.exe", StringComparison.OrdinalIgnoreCase);
     public string? FindInfrastructure()
     {
@@ -31,10 +32,10 @@ public sealed class EngineManager(AppPaths paths)
     }
     public Task<string> InstallAsync(string flavor = "cuda", IProgress<DownloadProgress>? progress = null, CancellationToken ct = default)
     {
-        if (flavor is not ("cuda" or "cpu")) throw new ArgumentException("引擎支持 cuda 或 cpu。");
+        if (flavor is not ("cuda" or "cpu")) throw new ArgumentException(Tr("引擎支持 cuda 或 cpu。"));
         ct.ThrowIfCancellationRequested();
-        var engine = FindInfrastructure() ?? throw new FileNotFoundException("未找到 Stemora Infra。请使用完整发布包，或先运行 scripts/Build-Native.ps1 构建后端。");
-        progress?.Report(new(1, 1, "Stemora Infra 已就绪（CUDA / CPU）"));
+        var engine = FindInfrastructure() ?? throw new FileNotFoundException(Tr("未找到 Stemora Infra。请使用完整发布包，或先运行 scripts/Build-Native.ps1 构建后端。"));
+        progress?.Report(new(1, 1, Tr("Stemora Infra 已就绪（CUDA / CPU）")));
         return Task.FromResult(engine);
     }
 }
