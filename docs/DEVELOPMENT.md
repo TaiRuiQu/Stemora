@@ -26,6 +26,8 @@
 
 `Build.ps1` 默认调用 `Build-Native.ps1`，然后构建 .NET / WinUI 并运行核心检查。`-CpuOnly` 可生成 CPU-only 测试产物；已单独构建后端时，用 `-SkipNativeBuild` 复用。
 
+应用与 CLI 构建会将 `artifacts/native` 的引擎及配套 DLL 复制到各自输出目录的 `native` 子目录，可直接启动开发构建。首次仅运行 `dotnet build` 不会编译 C++ 后端，请先执行 `Build-Native.ps1` 或使用完整的 `Build.ps1`。
+
 ## 发布
 
 ```powershell
@@ -82,5 +84,6 @@ CLI `--home` → `STEMORA_HOME` → `portable.flag` 所在目录的 `data` → `
 
 - [C++ Infra](NATIVE-INFRA.md)
 - [界面设计](UI-DESIGN.md)
+- [MuScriptor 转谱使用与接入](MELODY-TRANSCRIPTION.md)
 - [自动检查与发布](RELEASING.md)
 - [第三方说明](../THIRD-PARTY-NOTICES.md)

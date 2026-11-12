@@ -28,13 +28,63 @@ internal static class Program
                 catch (Exception error) when (error is IOException or JsonException or UnauthorizedAccessException) { }
                 PrintHelp(); return 0;
             }
-            if (parsed.Command[0] is "--version" or "version") { Emit("version", new { version = "0.3.0" }); return 0; }
+            if (parsed.Command[0] is "--version" or "version") { Emit("version", new { version = "0.4.0" }); return 0; }
             var settings = paths.LoadSettings();
             Strings.SetLanguage(settings.Language);
             var ct = cancellation.Token;
             var downloadProgress = new InlineProgress<DownloadProgress>(p => EmitProgress("download", p.Fraction, p.Message, p.Received, p.Total));
             switch (string.Join(' ', parsed.Command))
             {
+                case "melody models":
+                    Emit("models", MuScriptorService.Models.Select(m => new { m.Id, m.Repository, m.Size, m.Revision, m.Sha256, installed = new MuScriptorService(paths).IsModelInstalled(m.Id) }));
+                    return 0;
+                case "melody prepare":
+                    await new MuScriptorService(paths).PrepareAsync(parsed.Get("model") ?? "small", ParseDevice(parsed.Get("device"), ComputeDevice.Auto), null,
+                        new InlineProgress<SeparationProgress>(p => EmitProgress(p.Stage, p.Fraction, p.Message)), ct);
+                    Emit("completed", new { model = parsed.Get("model") ?? "small" });
+                    return 0;
+                case "melody transcribe":
+                    var vocalInput = Path.GetFullPath(parsed.Required("input"));
+                    using (var vocalReader = new NAudio.Wave.AudioFileReader(vocalInput))
+                    {
+                        var melody = new MelodyDocument
+                        {
+                            SourcePath = vocalInput,
+                            VocalPath = vocalInput,
+                            IsVocal = true,
+                            Model = parsed.Get("model") ?? "small",
+                            SourceSha256 = await MelodyDocument.FingerprintAsync(vocalInput, ct),
+                            Duration = vocalReader.TotalTime.TotalSeconds,
+                            RangeStart = parsed.Number("start") ?? 0,
+                            RangeEnd = parsed.Number("end") ?? vocalReader.TotalTime.TotalSeconds,
+                            ViewDuration = Math.Min(12, vocalReader.TotalTime.TotalSeconds)
+                        };
+                        melody.Validate();
+                        var melodyDevice = ParseDevice(parsed.Get("device"), ComputeDevice.Auto);
+                        var transcriber = new MuScriptorService(paths);
+                        var melodyProgress = new InlineProgress<SeparationProgress>(p => EmitProgress(p.Stage, p.Fraction, p.Message));
+                        await transcriber.PrepareAsync(melody.Model, melodyDevice, null, melodyProgress, ct);
+                        var music = await transcriber.AnalyzeAsync(vocalInput, melodyDevice, melody.RangeStart, melody.RangeEnd, melody.Duration, melodyProgress, ct);
+                        melody.Notes = await transcriber.TranscribeAsync(vocalInput, melody.Model, melodyDevice, melody.RangeStart, melody.RangeEnd, melody.Duration, melodyProgress, ct);
+                        melody.OriginalNotes = melody.Notes.ToArray();
+                        melody.Analyses.Add(new(melody.Model, MuScriptorService.GetModel(melody.Model).Revision, DateTimeOffset.Now, melody.Notes.ToArray()));
+                        MelodyTiming.Apply(melody, music); melody.Stage = "completed";
+                        var drafts = new MelodyDraftStore(paths); await drafts.SaveAsync(melody, ct);
+                        var pdfRoot = Path.GetFullPath(parsed.Get("output") ?? settings.OutputDirectory); Directory.CreateDirectory(pdfRoot);
+                        var pdfPath = Path.Combine(pdfRoot, $"melody-{melody.Id:N}.pdf");
+                        await MelodyScore.ExportPdfAsync(melody, pdfPath, ct);
+                        Emit("completed", new
+                        {
+                            draft = drafts.GetPath(melody.Id),
+                            pdf = pdfPath,
+                            notes = melody.Notes.Length,
+                            bpm = music.Bpm,
+                            key = music.Key is { } key ? MelodyScore.Keys[key] + (music.IsMinor ? "m" : "") : null,
+                            autoSnapped = music.Bpm != null,
+                            rhythmConfirmed = false
+                        });
+                    }
+                    return 0;
                 case "models list":
                     var models = ModelRepository.Catalog.Select(m => new
                     {
@@ -46,6 +96,8 @@ internal static class Program
                         m.Size,
                         m.Hardware,
                         m.ExportFormats,
+                        m.Purpose,
+                        m.FileFormat,
                         family = m.Profile ?? m.Architecture,
                         stems = m.Stems,
                         repository = m.Repository,
@@ -59,7 +111,8 @@ internal static class Program
                     var id = parsed.Required("id");
                     var model = ModelRepository.Catalog.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
                         ?? throw new ArgumentException(Tr("未知模型 ID：{0}。运行 models list 查看。", id));
-                    var modelPath = await new ModelRepository(paths).DownloadAsync(model, downloadProgress, ct);
+                    var modelPath = await new ModelRepository(paths).DownloadAsync(model, downloadProgress, ct,
+                        ParseDevice(parsed.Get("device"), ComputeDevice.Auto), stageProgress: new InlineProgress<SeparationProgress>(p => EmitProgress(p.Stage, p.Fraction, p.Message)));
                     Emit("completed", new { modelPath });
                     return 0;
                 case "models inspect":
@@ -137,7 +190,7 @@ internal static class Program
     }
     private static void PrintHelp()
     {
-        Console.WriteLine(Tr("Stemora 0.3.0 (多模型 GGUF 本地音频分离)"));
+        Console.WriteLine(Tr("Stemora 0.4.0 (本地音频分离与旋律转谱)"));
         Console.WriteLine("""
 
             stemora runtime install [--flavor cuda|cpu]
@@ -145,6 +198,10 @@ internal static class Program
             stemora models download --id anvuew-q8_0
             stemora models download --id bs-roformer-sw-q8_0
             stemora models inspect --model model.gguf
+            stemora melody models
+            stemora melody prepare --model small [--device auto|cpu|cuda]
+            stemora melody transcribe --input vocals.wav --model small --output ./scores
+              [--start 15.5] [--end 45.5] [--device auto|cpu|cuda]
             stemora doctor [--model model.gguf] [--engine stemora-infra.exe]
             stemora separate --input song.mp3 --model model.gguf --output ./stems
               [--device auto|cpu|cuda] [--overlap 2] [--chunk-size 352800]
@@ -179,11 +236,13 @@ internal sealed class Arguments
     public string Required(string name) => Get(name) ?? throw new ArgumentException(Tr("缺少 --{0}。", name));
     public int? Integer(string name) => Get(name) is { } value
         ? int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : throw new ArgumentException(Tr("--{0} 需要整数。", name)) : null;
+    public double? Number(string name) => Get(name) is { } value
+        ? double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) && double.IsFinite(n) ? n : throw new ArgumentException(Tr("--{0} 需要有限数值。", name)) : null;
     public static Arguments Parse(string[] args)
     {
         var result = new Arguments();
         string[] flags = ["json", "no-residual"];
-        string[] values = ["input", "model", "output", "engine", "device", "chunk-size", "overlap", "format", "id", "flavor", "home", "timeout", "profile", "stems"];
+        string[] values = ["input", "model", "output", "engine", "device", "chunk-size", "overlap", "format", "id", "flavor", "home", "timeout", "profile", "stems", "start", "end"];
         for (var i = 0; i < args.Length; i++)
         {
             if (!args[i].StartsWith("--", StringComparison.Ordinal) || args[i] is "--help" or "--version") { result.Command.Add(args[i]); continue; }

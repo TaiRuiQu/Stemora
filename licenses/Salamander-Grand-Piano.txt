@@ -1,0 +1,21 @@
+Salamander Grand Piano — Alexander Holm
+Yamaha C5 recordings, distributed via Tone.js audio.
+
+License: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+https://creativecommons.org/licenses/by/3.0/
+https://creativecommons.org/licenses/by/3.0/legalcode
+
+Sample source:
+https://github.com/Tonejs/audio/tree/869b6f8d9cddb47d966238c012041480b1ce517a/salamander
+Upstream attribution / license:
+https://github.com/Tonejs/audio/blob/869b6f8d9cddb47d966238c012041480b1ce517a/salamander/README
+
+Stemora bundles 30 anchor notes (A0–C8). Changes: decoded from MP3 to
+44.1 kHz mono PCM16, trimmed onset silence (keeping 1 ms pre-roll), capped
+at 10 seconds, faded the final 50 ms and gzip-compressed. Playback interpolates
+between anchor pitches, adjusts sample gain, and applies short attack/release
+ramps. The source revision, source hashes, PCM hashes and exact trimming are
+recorded in src/Stemora.Core/Data/Piano/manifest.json.
+
+These recordings retain their CC BY 3.0 license and are not relicensed under
+the application's MIT license. Retain this attribution when redistributing.

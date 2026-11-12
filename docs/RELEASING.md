@@ -28,7 +28,7 @@ git tag -a v0.3.0 -m 'Stemora 0.3.0'
 git push origin v0.3.0
 ```
 
-`Release` 工作流会重新运行 lint / 构建 / 测试，校验标签和源码版本，然后构建 CUDA / CPU 运行时和自包含 WinUI / CLI，打包并发布 GitHub Release。附件为 `Stemora-v版本-windows-x64.zip` 和 `SHA256SUMS.txt`，更新日志由 GitHub 自动生成。带 `-` 的标签（如 `v0.3.0-rc.1`）发布为 prerelease。
+`Release` 工作流会重新运行 lint / 构建 / 测试，校验标签和源码版本，然后构建 CUDA / CPU 运行时和自包含 WinUI / CLI，打包并发布 GitHub Release。附件为 `Stemora-v版本-windows-x64.zip` 和 `SHA256SUMS.txt`；优先使用 `docs/releases/<标签>.md` 的发布说明，未提供时由 GitHub 自动生成。带 `-` 的标签（如 `v0.3.0-rc.1`）发布为 prerelease。
 
 发布包不附带模型、个人设置或任务数据。构建不需要 GPU；流水线不执行真实模型推理。GPU 推理仍需在兼容硬件上单独验证。
 

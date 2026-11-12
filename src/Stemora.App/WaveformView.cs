@@ -23,6 +23,10 @@ public sealed class WaveformView : Grid
     public double ViewDuration { get; set; } = 1;
     public Color TrackColor { get; set; } = Color.FromArgb(255, 0, 103, 192);
     public bool NormalizeDisplay { get; set; } = true;
+    public double? HighlightStart { get; set; }
+    public double? HighlightEnd { get; set; }
+    public double? LoopStart { get; set; }
+    public double? LoopEnd { get; set; }
     public event Action<double>? Seek;
     public event Action<double>? Zoom;
     public WaveformView()
@@ -58,6 +62,16 @@ public sealed class WaveformView : Grid
         _empty.Visibility = Data == null ? Visibility.Visible : Visibility.Collapsed;
         _playhead.Stroke = new SolidColorBrush(ActualTheme == ElementTheme.Dark ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(255, 32, 32, 32));
         if (Data == null || ActualWidth < 1 || ActualHeight < 1) return;
+        void Highlight(double? start, double? end, byte alpha, bool outline)
+        {
+            if (start == null || end == null || end <= start) return;
+            var left = Math.Max(0, (start.Value - ViewStart) / ViewDuration * ActualWidth);
+            var right = Math.Min(ActualWidth, (end.Value - ViewStart) / ViewDuration * ActualWidth);
+            if (right <= left) return;
+            var area = new Rectangle { Width = right - left, Height = Math.Max(1, ActualHeight - 2), Fill = new SolidColorBrush(Color.FromArgb(alpha, 0, 103, 192)), Stroke = outline ? new SolidColorBrush(TrackColor) : null, StrokeThickness = 1, IsHitTestVisible = false };
+            Canvas.SetLeft(area, left); Canvas.SetTop(area, 1); _canvas.Children.Add(area);
+        }
+        Highlight(LoopStart, LoopEnd, 35, false); Highlight(HighlightStart, HighlightEnd, 8, true);
         var columns = Math.Max(1, (int)ActualWidth);
         var channels = Data.Channels;
         var axisBrush = new SolidColorBrush(Color.FromArgb(55, 127, 127, 127));

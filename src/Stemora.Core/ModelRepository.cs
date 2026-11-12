@@ -9,17 +9,28 @@ public sealed class ModelRepository(AppPaths paths)
 {
     public const string Repository = "chenmozhijin/BSRoformer-GGUF";
     public static IReadOnlyList<ModelInfo> Catalog { get; } = LoadCatalog();
+    public static IEnumerable<ModelInfo> SeparationCatalog => Catalog.Where(model => model.Purpose == ModelPurpose.Separation);
     private static readonly ConcurrentDictionary<string, ModelDescriptor> Descriptors = new(StringComparer.OrdinalIgnoreCase);
     private static IReadOnlyList<ModelInfo> LoadCatalog()
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Stemora.Core.Data.models.json")!;
-        return JsonSerializer.Deserialize<List<ModelInfo>>(stream, JsonDefaults.Options)!;
+        return JsonSerializer.Deserialize<List<ModelInfo>>(stream, JsonDefaults.Options)!
+            .Concat(MuScriptorService.Models.Select(model => model.ToCatalogEntry())).ToArray();
     }
-    public string GetPath(ModelInfo model) => Path.Combine(paths.Models, Path.GetFileName(model.RepositoryPath));
-    public bool IsInstalled(ModelInfo model) => File.Exists(GetPath(model)) && new FileInfo(GetPath(model)).Length == model.Size;
-    public async Task<string> DownloadAsync(ModelInfo model, IProgress<DownloadProgress>? progress = null, CancellationToken ct = default)
+    public string GetPath(ModelInfo model) => model.IsTranscription
+        ? Path.Combine(new MuScriptorService(paths).ModelDirectory(model.Variant!), "model.safetensors")
+        : Path.Combine(paths.Models, Path.GetFileName(model.RepositoryPath));
+    public bool IsInstalled(ModelInfo model) => model.IsTranscription ? new MuScriptorService(paths).IsModelInstalled(model.Variant!)
+        : File.Exists(GetPath(model)) && new FileInfo(GetPath(model)).Length == model.Size;
+    public async Task<string> DownloadAsync(ModelInfo model, IProgress<DownloadProgress>? progress = null, CancellationToken ct = default,
+        ComputeDevice device = ComputeDevice.Auto, string? hfToken = null, IProgress<SeparationProgress>? stageProgress = null)
     {
         paths.EnsureCreated();
+        if (model.IsTranscription)
+        {
+            await new MuScriptorService(paths).PrepareAsync(model.Variant!, device, hfToken, stageProgress, ct);
+            return GetPath(model);
+        }
         var escapedPath = string.Join('/', model.RepositoryPath.Split('/').Select(Uri.EscapeDataString));
         var uri = new Uri($"https://huggingface.co/{model.Repository}/resolve/{model.Revision}/{escapedPath}?download=true");
         var destination = GetPath(model);
@@ -34,7 +45,7 @@ public sealed class ModelRepository(AppPaths paths)
         var key = $"{path}|{file.Length}|{file.LastWriteTimeUtc.Ticks}|{(File.Exists(sidecar) ? File.GetLastWriteTimeUtc(sidecar).Ticks : 0)}";
         if (Descriptors.TryGetValue(key, out var cached)) return cached;
         var model = await Task.Run(() => GgufInspector.Read(path), ct);
-        foreach (var known in Catalog.Where(m => m.Size == file.Length && (m.Profile != null || m.Stems != null)))
+        foreach (var known in SeparationCatalog.Where(m => m.Size == file.Length && (m.Profile != null || m.Stems != null)))
         {
             if (!await Downloads.IsValidAsync(path, known.Sha256, known.Size, ct)) continue;
             var stems = known.Stems ?? model.Stems.Select(s => s.Id).ToArray();

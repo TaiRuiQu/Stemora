@@ -5,6 +5,7 @@ namespace Stemora.Core;
 
 public enum ComputeDevice { Auto, Cpu, Cuda }
 public enum WavEncoding { Float32, Pcm24, Pcm16 }
+public enum ModelPurpose { Separation, Transcription }
 public sealed record SeparationOptions(string InputPath, string ModelPath, string OutputDirectory,
     ComputeDevice Device = ComputeDevice.Auto, int? ChunkSize = null, int? Overlap = null,
     WavEncoding Encoding = WavEncoding.Float32, bool ExportResidual = true, string? EnginePath = null,
@@ -28,10 +29,12 @@ public sealed record DownloadProgress(long Received, long? Total, string Message
 public sealed record ModelInfo(string Id, string Name, string Author, string Architecture,
     string Quantization, string RepositoryPath, long Size, string Sha256, string Revision,
     string Repository = ModelRepository.Repository, string? Profile = null, string[]? Stems = null,
-    ModelHardware? Hardware = null, string[]? ExportFormats = null)
+    ModelHardware? Hardware = null, string[]? ExportFormats = null,
+    ModelPurpose Purpose = ModelPurpose.Separation, string FileFormat = "GGUF", string? Variant = null)
 {
-    public string DisplayName => $"{Name} ({Quantization})";
-    public string SizeLabel => $"{Size / 1048576d:F1} MB";
+    public bool IsTranscription => Purpose == ModelPurpose.Transcription;
+    public string DisplayName => IsTranscription ? Name : $"{Name} ({Quantization})";
+    public string SizeLabel => Size < 1073741824 ? $"{Size / 1048576d:F1} MB" : $"{Size / 1073741824d:F2} GB";
 }
 public sealed record ModelHardware(bool CpuSupported, bool CudaSupported, string RecommendedDevice,
     double? RecommendedVramGb = null, string? Source = null, double? RecommendedRamGb = null,

@@ -8,17 +8,18 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4)](#requirements)
 [![License](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 
-Stemora is a free, local audio separation tool for remixes, covers, sampling, mixing practice, and video production. It does not need a Python environment, never uploads your audio, and has no server component.
+Stemora is a free, local audio separation and melody transcription tool for remixes, covers, sampling, mixing practice, and video production. Separation needs no Python environment; MuScriptor transcription automatically prepares an isolated local runtime. Audio stays on your computer, with no server component.
 
 **[Download for Windows](https://github.com/TaiRuiQu/Stemora/releases/latest)** / [Quick start](#quick-start) / [FAQ](#faq)
 
-> The app interface is currently in Simplified Chinese. The key labels below include the Chinese text you will see in the app.
+The app supports English and Simplified Chinese.
 
 ![Stemora main window](docs/images/main-window.png)
 
 ## Features
 
 - **Multi-stem separation**: use a six-stem model to get vocals, drums, bass, guitar, piano, and other instruments in one pass.
+- **Melody transcription**: local MuScriptor inference, neural BPM and major/minor key analysis, and automatic note snapping to a beat grid. Includes a piano roll editor, sampled piano and synchronized vocal playback, loops, drafts and numbered notation PDF export. Official model access is required; see the [integration and usage guide](docs/MELODY-TRANSCRIPTION.md).
 - **Runs locally**: your audio and results stay on your computer. The network is only used to download models.
 - **Synchronized playback**: every track shares one timeline, with mute, solo, per-track volume, and waveform zoom.
 - **Flexible export**: choose the tracks you need and export WAV or 320 kbps MP3.
@@ -39,7 +40,7 @@ The top-level `Stemora.App.exe` launches the app. Runtime dependencies live in `
 | OS | Windows 10 version 2004 (build 19041) or later; Windows 11 |
 | Architecture | x64 |
 | GPU | Optional. NVIDIA GPUs can use CUDA; otherwise Stemora uses the CPU |
-| Disk | About 250 MB for the app; 30 MB–1 GB per model; allow several GB for results |
+| Disk | About 1.1 GB unpacked; 30 MB–1 GB per separation model or 0.4–5.5 GB per transcription model; allow several more GB for the transcription runtime and results |
 | Other | No administrator rights, Python, or separate .NET installation required |
 
 > If Windows shows an "Unknown publisher" warning on first launch, confirm that the file came from this repository's Releases, then choose "More info" → "Run anyway".
@@ -141,7 +142,7 @@ Each job folder contains the separated WAV files and a `result.json`. The JSON r
 ## FAQ
 
 **Is my audio uploaded anywhere?**<br>
-No. Separation runs entirely on your computer, and audio and results are written only to local disk. The network is used only to download models from Hugging Face.
+No. Separation and transcription run entirely on your computer, and audio and results are written only to local disk. The network is used to download models and prepare the isolated transcription runtime and its dependencies.
 
 **Can I use it without an NVIDIA GPU?**<br>
 Yes. Set **计算设备** (Compute device) to **自动（优先 CUDA）** (Auto) or **仅 CPU** (CPU only). CPU separation works, but it takes longer.

@@ -29,11 +29,13 @@ public partial class App : Application
                 var inputIndex = Array.IndexOf(commandLine, "--capture-input");
                 var modelIndex = Array.IndexOf(commandLine, "--capture-model");
                 var resultIndex = Array.IndexOf(commandLine, "--capture-result");
+                var melodyDraftIndex = Array.IndexOf(commandLine, "--capture-melody-draft");
                 await MainWindow.CaptureUiAsync(commandLine[captureIndex + 1],
                     inputIndex >= 0 && inputIndex + 1 < commandLine.Length ? commandLine[inputIndex + 1] : null,
                     commandLine.Contains("--capture-run"),
                     modelIndex >= 0 && modelIndex + 1 < commandLine.Length ? commandLine[modelIndex + 1] : null,
-                    resultIndex >= 0 && resultIndex + 1 < commandLine.Length ? commandLine[resultIndex + 1] : null);
+                    resultIndex >= 0 && resultIndex + 1 < commandLine.Length ? commandLine[resultIndex + 1] : null,
+                    melodyDraftIndex >= 0 && melodyDraftIndex + 1 < commandLine.Length ? commandLine[melodyDraftIndex + 1] : null, commandLine.Contains("--capture-melody"));
             }
             catch (Exception e)
             {
@@ -44,5 +46,8 @@ public partial class App : Application
             // Diagnostic invocations are finite commands, even if Media Foundation retains a native thread.
             finally { Environment.Exit(captureExitCode); }
         }
+        var draftIndex = Array.IndexOf(commandLine, "--open-melody-draft");
+        if (draftIndex >= 0 && draftIndex + 1 < commandLine.Length)
+            await MainWindow.OpenMelodyDraftAsync(commandLine[draftIndex + 1]);
     }
 }

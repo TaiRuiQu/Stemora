@@ -26,6 +26,8 @@ For developers who want to build, test, or modify Stemora from source. If you ju
 
 `Build.ps1` calls `Build-Native.ps1` by default, then builds the .NET / WinUI app and runs the core checks. Use `-CpuOnly` for CPU-only test binaries; use `-SkipNativeBuild` to reuse an existing backend.
 
+App and CLI builds copy the engine and its DLLs from `artifacts/native` into a `native` subfolder in their output directories so development builds can run directly. A first-time `dotnet build` does not compile the C++ backend; run `Build-Native.ps1` first or use the full `Build.ps1`.
+
 ## Publish
 
 ```powershell

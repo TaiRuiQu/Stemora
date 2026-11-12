@@ -7,6 +7,27 @@ using System.Text.Json;
 using NAudio.Wave;
 using Stemora.Core;
 
+if (args.FirstOrDefault() == "--melody-process")
+{
+    if (args[1] == "carriage")
+    {
+        Console.Error.Write("Downloading torch (2.4 GiB)\r"); Console.Error.Flush();
+        await Task.Delay(30000); return 0;
+    }
+    if (args[1] == "stages")
+    {
+        foreach (var stage in new[] { "runtime-download", "runtime-python", "runtime-packages", "runtime-verify", "runtime-ready", "download" })
+            Console.WriteLine($"{{\"stage\":\"{stage}\",\"fraction\":null}}");
+        return 0;
+    }
+    if (args[1] == "wait") await Task.Delay(30000);
+    if (args[1] == "fail") { Console.Error.WriteLine("test-private-token intentional failure"); return 7; }
+    Console.WriteLine("{\"stage\":\"loading\",\"fraction\":null}");
+    Console.WriteLine("{\"stage\":\"transcribe\",\"fraction\":0.5}");
+    if (args[1] == "tail") Console.Error.Write("Finished installing dependencies");
+    return 0;
+}
+
 if (args.FirstOrDefault() == "--verify-real")
 {
     var result = JsonSerializer.Deserialize<SeparationResult>(File.ReadAllText(args[1]), JsonDefaults.Options)!;
@@ -116,8 +137,8 @@ try
     }
     Check(NativeOutputParser.ParseFraction("[==>] 42 %") == 0.42, "native carriage-return progress parser");
     Check(NativeOutputParser.ParseFraction("tensor size: 256") == null && NativeOutputParser.ParseFraction("144 %") == null, "ignore unrelated numbers and invalid progress");
-    Check(ModelRepository.Catalog.Count == 22 && ModelRepository.Catalog.All(m => m.Sha256.Length == 64 && m.Revision.Length == 40), "pinned catalog and SHA-256 coverage");
-    var catalog = ModelRepository.Catalog;
+    Check(ModelRepository.Catalog.Count == 25 && ModelRepository.Catalog.All(m => m.Sha256.Length == 64 && m.Revision.Length == 40), "unified catalog pins separation and MuScriptor models with SHA-256 coverage");
+    var catalog = ModelRepository.SeparationCatalog.ToArray();
     Check(catalog.All(m => m.Stems is { Length: > 0 } && m.Hardware is { CpuSupported: true, CudaSupported: true }
         && m.ExportFormats?.SequenceEqual(new[] { "WAV", "MP3" }) == true), "every model documents outputs, platforms and export formats");
     Check(catalog.Where(m => new ModelFilters(Quantization: "Q4_0", Stem: "instrumental", StemCount: -1,
@@ -320,6 +341,7 @@ try
     await File.WriteAllTextAsync(gguf + ".stemora.json", "{\"family\":\"bs_roformer_sw\",\"stems\":[\"bass\",\"drums\",\"other\",\"vocals\",\"guitar\",\"../piano\"]}");
     try { GgufInspector.Read(gguf); throw new Exception("Unsafe stem accepted"); }
     catch (InvalidDataException) { Check(true, "reject unsafe or mismatched stem sidecars"); }
+    await MelodyTests.RunAsync(Check, root, input, paths);
     Console.WriteLine($"\n{passed} checks passed.");
     return 0;
 }

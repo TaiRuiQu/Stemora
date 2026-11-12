@@ -5,8 +5,8 @@ namespace Stemora.Core;
 
 public sealed class EngineManager(AppPaths paths)
 {
-    public const string Version = "0.3.0";
-    public const string InfraVersion = "0.3.0";
+    public const string Version = "0.4.0";
+    public const string InfraVersion = "0.4.0";
     public static bool IsInfrastructure(string path) => Path.GetFileName(path).Equals("stemora-infra.exe", StringComparison.OrdinalIgnoreCase);
     public string? FindInfrastructure()
     {

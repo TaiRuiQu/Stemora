@@ -6,6 +6,10 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Input;
+using Windows.System;
+using Windows.UI.Core;
 using Microsoft.UI.Xaml.Shapes;
 using Stemora.Core;
 using Windows.ApplicationModel.DataTransfer;
@@ -27,6 +31,8 @@ public sealed partial class MainWindow : Window
     private bool _ready;
     private bool _closed;
     private readonly Queue<string> _logs = new();
+    private MelodyWorkspace? _melodyWorkspace;
+    private bool _melodySpacePressed;
 
     public MainWindow()
     {
@@ -56,12 +62,52 @@ public sealed partial class MainWindow : Window
             _closed = true;
             _runCancellation?.Cancel();
             _downloadCancellation?.Cancel();
+            _downloadTimer?.Stop();
             _exportCancellation?.Cancel();
         };
         Root.ActualThemeChanged += (_, _) => { UpdateCaptionColors(); DrawTimelineRuler(); };
         UpdateCaptionColors();
         InitializeTimeline();
+        _melodyWorkspace = new MelodyWorkspace(_paths, WinRT.Interop.WindowNative.GetWindowHandle(this), NewFilePicker, ExtractMelodyVocalAsync, () => _runCancellation != null || _downloadCancellation != null);
+        _melodyWorkspace.ModelLibraryRequested += OpenTranscriptionModels;
+        _melodyWorkspace.ModelAvailabilityChanged += RefreshCatalogAvailability;
+        MelodyHost.Child = _melodyWorkspace;
+        Root.PreviewKeyDown += MelodyShortcut_KeyDown;
+        Root.PreviewKeyUp += (_, e) =>
+        {
+            if (e.Key == VirtualKey.Space && _melodySpacePressed) { _melodySpacePressed = false; e.Handled = true; }
+        };
+        Activated += (_, e) => { if (e.WindowActivationState == WindowActivationState.Deactivated) _melodySpacePressed = false; };
+        Closed += (_, _) => _melodyWorkspace.Dispose();
         RefreshLanguage();
+    }
+
+    private void MelodyShortcut_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        static bool Down(VirtualKey key) => (InputKeyboardSource.GetKeyStateForCurrentThread(key) & CoreVirtualKeyStates.Down) != 0;
+        if (e.Handled) return;
+        e.Handled = TryMelodyShortcut(e.Key, Down(VirtualKey.Control), Down(VirtualKey.Shift), Down(VirtualKey.Menu),
+            e.KeyStatus.WasKeyDown, FocusManager.GetFocusedElement(Root.XamlRoot) as DependencyObject);
+    }
+    private bool TryMelodyShortcut(VirtualKey key, bool control, bool shift, bool alt, bool repeat, DependencyObject? focus)
+    {
+        if (MelodyHost.Visibility != Visibility.Visible || _melodyWorkspace == null) return false;
+        if (VisualTreeHelper.GetOpenPopupsForXamlRoot(Root.XamlRoot).Count > 0) return false;
+        for (var element = focus; element != null; element = VisualTreeHelper.GetParent(element))
+        {
+            if (element is TextBox or RichEditBox or PasswordBox or NumberBox or AutoSuggestBox or ComboBox or ContentDialog)
+                return false;
+            if (key != VirtualKey.Space && element is Slider) return false;
+            if (element is NavigationViewItem && key is (VirtualKey.Up or VirtualKey.Down or VirtualKey.Left or VirtualKey.Right)) return false;
+        }
+        if (key == VirtualKey.Space && !control && !shift && !alt)
+        {
+            // Consume both down and up before a focused Button can run its last action.
+            _melodySpacePressed = true;
+            if (!repeat) _melodyWorkspace.HandleShortcut(key, false, false, false);
+            return true;
+        }
+        return _melodyWorkspace.HandleShortcut(key, control, shift, alt);
     }
 
     private void ApplySettings()
@@ -116,6 +162,12 @@ public sealed partial class MainWindow : Window
     }
     private void ShowPage(string tag)
     {
+        if (tag == "models") RefreshCatalogAvailability();
+        if (tag == "melody") _melodyWorkspace?.RefreshModelAvailability();
+        ContentScroll.Visibility = tag == "melody" ? Visibility.Collapsed : Visibility.Visible;
+        MelodyHost.Visibility = tag == "melody" ? Visibility.Visible : Visibility.Collapsed;
+        if (tag == "melody") _mixer?.Pause();
+        else _melodyWorkspace?.Pause();
         SeparatePage.Visibility = tag == "separate" ? Visibility.Visible : Visibility.Collapsed;
         ModelsPage.Visibility = tag == "models" ? Visibility.Visible : Visibility.Collapsed;
         SettingsPage.Visibility = tag == "settings" ? Visibility.Visible : Visibility.Collapsed;
@@ -123,7 +175,49 @@ public sealed partial class MainWindow : Window
         TimelineTransport.Visibility = tag == "separate" && _trackViews.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         ContentScroll.ChangeView(null, 0, null, true);
     }
-    private void ManageModels_Click(object sender, RoutedEventArgs e) => Navigation.SelectedItem = Navigation.MenuItems[1];
+    private NavigationViewItem NavigationItem(string tag) => Navigation.MenuItems.OfType<NavigationViewItem>().First(item => Equals(item.Tag, tag));
+    internal async Task OpenMelodyDraftAsync(string path)
+    {
+        Navigation.SelectedItem = NavigationItem("melody");
+        try { if (_melodyWorkspace != null) await _melodyWorkspace.OpenDraftAsync(path); }
+        catch (Exception error) { ShowError(error); }
+    }
+    private void ManageModels_Click(object sender, RoutedEventArgs e) => Navigation.SelectedItem = NavigationItem("models");
+    private void OpenTranscriptionModels(string variant)
+    {
+        foreach (var combo in new[] { QuantFilter, TrackFilter, PlatformFilter, OutputFilter, ArchitectureFilter, ExportFilter }) combo.SelectedIndex = 0;
+        MuScriptorService.GetModel(variant);
+        ModelSearch.Text = "MuScriptor";
+        PurposeFilter.SelectedIndex = 2;
+        Navigation.SelectedItem = NavigationItem("models");
+    }
+    private async void MuScriptorAccess_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string variant }) return;
+        try { await Windows.System.Launcher.LaunchUriAsync(new Uri("https://huggingface.co/" + MuScriptorService.GetModel(variant).Repository)); }
+        catch (Exception error) { ShowError(error); }
+    }
+
+    private async Task<string> ExtractMelodyVocalAsync(string input, IProgress<SeparationProgress> progress, CancellationToken ct)
+    {
+        if (_runCancellation != null) throw new InvalidOperationException(Tr("请等待当前音频分离完成后再识别旋律。"));
+        if (new EngineManager(_paths).Find(_settings.EnginePath) == null)
+            throw new FileNotFoundException(Tr("未找到 Stemora Infra。请使用完整发布包，或先运行 scripts/Build-Native.ps1 构建后端。"));
+        var repository = new ModelRepository(_paths);
+        var model = ModelRepository.SeparationCatalog.Where(m => m.Stems?.Contains("vocals") == true)
+            .OrderByDescending(m => repository.IsInstalled(m)).ThenByDescending(m => m.Id == "bs-roformer-sw-q8_0").First();
+        if (!repository.IsInstalled(model))
+        {
+            progress.Report(new("download", null, Tr("正在下载人声分离模型：{0}", model.SizeLabel)));
+            await repository.DownloadAsync(model, new Progress<DownloadProgress>(p => progress.Report(new("download", p.Fraction, Tr("正在下载人声分离模型")))), ct);
+            RefreshModels(_settings.ModelPath);
+        }
+        var result = await new SeparationService(_paths).SeparateAsync(new(input, repository.GetPath(model), _settings.OutputDirectory,
+            _settings.Device, Encoding: WavEncoding.Float32, ExportResidual: false, EnginePath: _settings.EnginePath),
+            new Progress<SeparationProgress>(p => progress.Report(new("separate", p.Fraction, p.Message))), ct);
+        var vocal = result.Tracks?.FirstOrDefault(track => track.Id == "vocals");
+        return vocal?.Path ?? throw new InvalidDataException(Tr("分离结果没有已知人声音轨，请试听选择人声。"));
+    }
 
     private async void AddFiles_Click(object sender, RoutedEventArgs e)
     {
@@ -218,13 +312,14 @@ public sealed partial class MainWindow : Window
     private async Task RunQueueAsync()
     {
         if (_runCancellation != null) return;
+        if (_melodyWorkspace?.IsBusy == true) { ShowNotice(Tr("正在识别旋律"), Tr("请等待旋律处理完成后再开始分离。"), InfoBarSeverity.Informational); return; }
         var pending = _jobs.Where(j => j.Result == null).ToArray();
         if (pending.Length == 0) { ShowNotice(Tr("添加音频"), Tr("请添加尚未分离的音频。"), InfoBarSeverity.Informational); return; }
         CancellationTokenSource? cancellation = null;
         try
         {
             await PersistSettingsAsync();
-            if (_settings.ModelPath == null) { Navigation.SelectedItem = Navigation.MenuItems[1]; ShowNotice(Tr("先选择一个模型"), Tr("下载仓库模型，或导入本地 GGUF 文件。"), InfoBarSeverity.Informational); return; }
+            if (_settings.ModelPath == null) { Navigation.SelectedItem = NavigationItem("models"); ShowNotice(Tr("先选择一个模型"), Tr("下载仓库模型，或导入本地 GGUF 文件。"), InfoBarSeverity.Informational); return; }
             if (new EngineManager(_paths).Find(_settings.EnginePath) == null)
             { Navigation.SelectedItem = Navigation.SettingsItem; ShowNotice(Tr("未找到推理引擎"), Tr("请检查 Stemora Infra 文件，或选择已有引擎。"), InfoBarSeverity.Informational); return; }
             var snapshot = _settings;
@@ -295,14 +390,20 @@ public sealed partial class MainWindow : Window
     {
         selected ??= (ModelCombo.SelectedItem as ModelChoice)?.Path;
         var repository = new ModelRepository(_paths);
-        var choices = ModelRepository.Catalog.Where(repository.IsInstalled)
+        var choices = ModelRepository.SeparationCatalog.Where(repository.IsInstalled)
             .OrderByDescending(m => m.Quantization == "Q8_0").Select(m => new ModelChoice(m.DisplayName, repository.GetPath(m))).ToList();
         foreach (var path in new[] { selected, _settings.ModelPath }.Where(p => p != null).Distinct())
             if (File.Exists(path) && !choices.Any(m => m.Path.Equals(path, StringComparison.OrdinalIgnoreCase)))
                 choices.Add(new(System.IO.Path.GetFileName(path!), path!));
         ModelCombo.ItemsSource = choices;
         ModelCombo.SelectedItem = choices.FirstOrDefault(m => m.Path.Equals(selected, StringComparison.OrdinalIgnoreCase)) ?? choices.FirstOrDefault();
+        RefreshCatalogAvailability();
+    }
+    private void RefreshCatalogAvailability()
+    {
+        var repository = new ModelRepository(_paths);
         foreach (var row in _catalog) row.Installed = repository.IsInstalled(row.Model);
+        _melodyWorkspace?.RefreshModelAvailability();
     }
     private int _modelSelectionVersion;
     private ModelDescriptor? _selectedDescriptor;
@@ -328,7 +429,7 @@ public sealed partial class MainWindow : Window
         static string? Tag(ComboBox combo) => (combo.SelectedItem as ComboBoxItem)?.Tag as string;
         var filters = new ModelFilters(ModelSearch.Text.Trim(), Tag(QuantFilter), Tag(OutputFilter),
             TrackFilter.SelectedIndex switch { 1 => 1, 2 => -1, _ => null }, Tag(PlatformFilter),
-            Tag(ArchitectureFilter), Tag(ExportFilter));
+            Tag(ArchitectureFilter), Tag(ExportFilter), PurposeFilter.SelectedIndex switch { 1 => ModelPurpose.Separation, 2 => ModelPurpose.Transcription, _ => null });
         var rows = _catalog.Where(row => filters.Matches(row.Model)).ToList();
         CatalogList.ItemsSource = rows;
         CatalogCount.Text = Tr("{0} / {1} 个模型", rows.Count, _catalog.Count);
@@ -351,30 +452,66 @@ public sealed partial class MainWindow : Window
     {
         if (sender is not Button { Tag: string id }) return;
         var row = _catalog.Single(m => m.Model.Id == id);
+        if (row.Model.IsTranscription && _melodyWorkspace?.IsBusy == true)
+        { ShowNotice(Tr("正在识别旋律"), Tr("请等待当前旋律处理完成后再更换或下载模型。"), InfoBarSeverity.Informational); return; }
+        var device = (ComputeDevice)MuScriptorDeviceCombo.SelectedIndex;
         if (row.Installed)
         {
+            if (row.Model.IsTranscription)
+            {
+                if (_melodyWorkspace?.SelectModel(row.Model.Variant!, device) == true) Navigation.SelectedItem = NavigationItem("melody");
+                return;
+            }
             RefreshModels(new ModelRepository(_paths).GetPath(row.Model));
-            try { await PersistSettingsAsync(); Navigation.SelectedItem = Navigation.MenuItems[0]; }
+            try { await PersistSettingsAsync(); Navigation.SelectedItem = NavigationItem("separate"); }
             catch (Exception ex) { ShowError(ex); }
             return;
         }
         if (_downloadCancellation != null) { ShowNotice(Tr("正在下载"), Tr("请等待当前下载完成，或先取消。"), InfoBarSeverity.Informational); return; }
         using var cancellation = new CancellationTokenSource();
-        _downloadCancellation = cancellation; DownloadPanel.Visibility = Visibility.Visible;
+        _downloadCancellation = cancellation;
+        StartDownloadStatus(row.Model.DisplayName, row.Model.IsTranscription);
+        var completed = false;
+        var token = row.Model.IsTranscription ? MuScriptorToken.Password : null;
+        if (row.Model.IsTranscription) MuScriptorToken.Password = "";
+        MuScriptorDeviceCombo.IsEnabled = MuScriptorToken.IsEnabled = false;
         try
         {
             var path = await new ModelRepository(_paths).DownloadAsync(row.Model, new Progress<DownloadProgress>(p =>
             {
+                if (_closed || !ReferenceEquals(_downloadCancellation, cancellation)) return;
                 DownloadLabel.Text = $"{row.Model.DisplayName}: {p.Message} ({p.Received / 1048576d:F1} / {row.Model.SizeLabel})";
                 DownloadBar.IsIndeterminate = p.Fraction == null;
                 if (p.Fraction.HasValue) DownloadBar.Value = p.Fraction.Value * 100;
-            }), cancellation.Token);
+            }), cancellation.Token, device, token, new Progress<SeparationProgress>(p =>
+            {
+                if (_closed || !ReferenceEquals(_downloadCancellation, cancellation)) return;
+                UpdateModelDownload(row.Model.DisplayName, p);
+            }));
+            if (row.Model.IsTranscription)
+            {
+                RefreshCatalogAvailability();
+                _melodyWorkspace?.SelectModel(row.Model.Variant!, device);
+                ShowNotice(Tr("模型已就绪"), Tr("{0} 已下载，可点击“使用”返回旋律转谱。", row.Model.DisplayName), InfoBarSeverity.Success);
+                completed = true;
+                return;
+            }
             RefreshModels(path); await PersistSettingsAsync();
             ShowNotice(Tr("模型已就绪"), Tr("{0}，已设为当前模型。", row.Model.DisplayName), InfoBarSeverity.Success);
+            completed = true;
         }
-        catch (OperationCanceledException) { ShowNotice(Tr("下载已取消"), Tr("已保留断点，再次下载会继续。"), InfoBarSeverity.Informational); }
-        catch (Exception ex) { ShowError(ex); }
-        finally { _downloadCancellation = null; DownloadPanel.Visibility = Visibility.Collapsed; }
+        catch (OperationCanceledException) { DownloadLabel.Text = Tr("下载已取消"); ShowNotice(Tr("下载已取消"), Tr("已保留断点，再次下载会继续。"), InfoBarSeverity.Informational); }
+        catch (Exception ex)
+        {
+            DownloadLabel.Text = Tr("下载或安装失败，可重试"); DownloadDetail.Text = ex.Message;
+            if (row.Model.IsTranscription && (ex.Message.Contains("GatedRepoError", StringComparison.Ordinal) || ex.Message.Contains("401", StringComparison.Ordinal)))
+            {
+                MuScriptorDownloadOptions.IsExpanded = true;
+                ShowNotice(Tr("需要模型授权"), Tr("需要 MuScriptor 模型授权。请前往模型库，展开“MuScriptor 下载与授权”，接受模型许可后重试。"), InfoBarSeverity.Warning);
+            }
+            else ShowError(ex);
+        }
+        finally { _downloadCancellation = null; StopDownloadStatus(completed); MuScriptorDeviceCombo.IsEnabled = MuScriptorToken.IsEnabled = true; RefreshCatalogAvailability(); }
     }
     private void CancelDownload_Click(object sender, RoutedEventArgs e) => _downloadCancellation?.Cancel();
     private async void PickEngine_Click(object sender, RoutedEventArgs e)

@@ -36,7 +36,7 @@ public sealed partial class MainWindow
         try
         {
             foreach (var combo in new[] { QuantFilter, TrackFilter, PlatformFilter, OutputFilter,
-                ArchitectureFilter, ExportFilter, DeviceCombo, FormatCombo, ThemeCombo, LanguageCombo })
+                ArchitectureFilter, ExportFilter, PurposeFilter, MuScriptorDeviceCombo, DeviceCombo, FormatCombo, ThemeCombo, LanguageCombo })
             {
                 var selected = combo.SelectedIndex;
                 if (selected < 0) continue;

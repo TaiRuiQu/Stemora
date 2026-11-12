@@ -134,6 +134,28 @@ public sealed partial class MainWindow
         label.FontSize = 16;
         peak.FontSize = 14;
         control.Children.Add(trackTitle); control.Children.Add(toggles); control.Children.Add(meter);
+        if (track.Id is not "original" and not "instrumental" and not "residual" and not "bass" and not "drums" and not "guitar" and not "piano" and not "other")
+        {
+            var transcribe = new HyperlinkButton { Padding = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Left };
+            Loc.SetContent(transcribe, "转成旋律");
+            transcribe.Click += async (_, _) =>
+            {
+                if (_melodyWorkspace == null) return;
+                try
+                {
+                    if (track.Id != "vocals")
+                    {
+                        var confirm = new ContentDialog { XamlRoot = Root.XamlRoot, Title = Tr("选择人声音轨"), Content = Tr("请先试听确认此音轨是人声，再继续转谱。"), PrimaryButtonText = Tr("这是人声，继续"), CloseButtonText = Tr("取消") };
+                        if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+                    }
+                    Navigation.SelectedItem = NavigationItem("melody");
+                    var original = (QueueList.SelectedItem as AudioJob)?.Path ?? track.Path;
+                    await _melodyWorkspace.LoadAudioAsync(original, track.Path);
+                }
+                catch (Exception error) { ShowError(error); }
+            };
+            control.Children.Add(transcribe);
+        }
         var wave = new WaveformView { TrackColor = TrackColors[index % TrackColors.Length], Opacity = track.Muted ? 0.4 : 1, NormalizeDisplay = NormalizeWaveform.IsChecked == true };
         var row = new Grid
         {

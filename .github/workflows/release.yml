@@ -72,7 +72,9 @@ jobs:
         run: |
           $tag = $env:RELEASE_TAG
           $archive = "artifacts/Stemora-$tag-windows-x64.zip"
-          gh release create $tag $archive artifacts/SHA256SUMS.txt --verify-tag --title "Stemora $tag" --generate-notes --draft
+          $notes = "docs/releases/$tag.md"
+          $notesArguments = if (Test-Path -LiteralPath $notes) { @('--notes-file', $notes) } else { @('--generate-notes') }
+          gh release create $tag $archive artifacts/SHA256SUMS.txt --verify-tag --title "Stemora $tag" @notesArguments --draft
           if ($LASTEXITCODE -ne 0) { throw 'Release creation or asset upload failed.' }
           if ($tag.Contains('-')) { gh release edit $tag --draft=false --prerelease --latest=false }
           else { gh release edit $tag --draft=false --latest }

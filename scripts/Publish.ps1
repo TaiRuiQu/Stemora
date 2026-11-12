@@ -57,7 +57,7 @@ try {
     New-Item -ItemType File -Force "$destination/portable.flag" | Out-Null
     Copy-Item -LiteralPath README.md,README.en.md,LICENSE,THIRD-PARTY-NOTICES.md -Destination $destination
     New-Item -ItemType Directory -Force "$destination/docs/images" | Out-Null
-    Copy-Item -LiteralPath docs/UI-DESIGN.md,docs/NATIVE-INFRA.md,docs/RELEASING.md,docs/CLI.md,docs/CLI.en.md,docs/DEVELOPMENT.md,docs/DEVELOPMENT.en.md,docs/MODEL-CATALOG.md,docs/MODEL-MEMORY.md -Destination "$destination/docs"
+    Copy-Item -LiteralPath docs/UI-DESIGN.md,docs/NATIVE-INFRA.md,docs/RELEASING.md,docs/CLI.md,docs/CLI.en.md,docs/DEVELOPMENT.md,docs/DEVELOPMENT.en.md,docs/MODEL-CATALOG.md,docs/MODEL-MEMORY.md,docs/MELODY-TRANSCRIPTION.md,docs/MELODY-TRANSCRIPTION-UX.md,docs/MUSIC-ANALYSIS.md -Destination "$destination/docs"
     New-Item -ItemType Directory -Force "$destination/docs/benchmarks" | Out-Null
     Copy-Item -Path 'docs/benchmarks/*.json' -Destination "$destination/docs/benchmarks" -Force
     Copy-Item -Path 'docs/images/*' -Destination "$destination/docs/images" -Force
